@@ -46,7 +46,13 @@ const filtered = computed(()=>fontList.value.filter(font=>{
 }))
 const comparison = computed(()=>selection.value.map(id=>fontList.value.find(f=>f.id===id)).filter((f):f is FontRecord=>Boolean(f)))
 const favoriteCount = computed(()=>favorites.value.length)
-function previewText(font:FontRecord) { return sample.value===originalSample && font.languages==='英文' ? englishSample : sample.value || 'Typography is beautiful.' }
+function previewText(font:FontRecord) {
+  if(sample.value!==originalSample) return sample.value || 'Typography is beautiful.'
+  if(font.languages==='英文') return englishSample
+  if(font.languages.includes('韩') && !font.languages.includes('中')) return '한글의 아름다움'
+  if(font.languages.includes('日') && !font.languages.includes('中')) return 'かなと漢字のデザイン'
+  return originalSample
+}
 function available(font:FontRecord) { return Boolean(localFamily[font.id]) || (font.source==='bundled' && fontStatus[font.id]==='ready') }
 function downloadExt(font:FontRecord){return ['gensen','genyo-gothic'].includes(font.id)?'otf':'ttf'}
 function downloadUrl(font:FontRecord){return import.meta.env.BASE_URL+'fonts/'+font.id+'/download.'+downloadExt(font)}
@@ -61,7 +67,7 @@ function ensureFont(font:FontRecord) {
   link.rel='stylesheet'
   link.href=import.meta.env.BASE_URL+'fonts/'+font.id+'.css'
   link.onload=async()=>{
-    try { const test=font.languages==='英文'?'Typography':'字体预览'; const loaded=await document.fonts.load('400 32px "'+font.family+'"',test); fontStatus[font.id]=loaded.length?'ready':'error' }
+    try { const test=font.languages==='英文'?'Typography':font.languages.includes('韩')&&!font.languages.includes('中')?'한글문자':font.languages.includes('日')&&!font.languages.includes('中')?'あいうえお':'字体预览'; const loaded=await document.fonts.load('400 32px "'+font.family+'"',test); fontStatus[font.id]=loaded.length?'ready':'error' }
     catch {fontStatus[font.id]='error'}
   }
   link.onerror=()=>{ fontStatus[font.id]='error' }
