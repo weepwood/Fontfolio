@@ -41,3 +41,10 @@
 .modal-actions .font-file-download:hover{background:var(--accent);border-color:var(--accent);color:#fff}
 .modal-actions .font-license-download:hover{background:var(--selected)}
 @media(max-width:600px){.modal-actions .font-file-download,.modal-actions .font-license-download{flex:1;justify-content:center}}
+
+/* Distinguish self-hosted downloads from the original publisher's files. */
+.card-official{height:30px;width:30px;display:grid;place-items:center;border-radius:50%;color:var(--muted);transition:background .15s,color .15s}
+.card-official:hover{background:var(--selected);color:var(--accent)}
+.modal-actions .font-upstream-download{border:1px solid var(--border);border-radius:7px;padding:10px 13px;display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:640;text-decoration:none}
+.modal-actions .font-upstream-download:hover{background:var(--selected);color:var(--accent)}
+@media(max-width:600px){.modal-actions .font-upstream-download{flex:1;justify-content:center}}

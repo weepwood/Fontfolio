@@ -31,6 +31,21 @@ const localFamily = reactive<Record<string,string>>({})
 const localOrigin = reactive<Record<string,'installed'|'imported'>>({})
 const activeFaces = new Map<string,FontFace>()
 const fontStatus = reactive<Record<string,Status>>({})
+const officialSources = reactive<Record<string,string>>({})
+async function loadOfficialSources(){
+  try {
+    const response=await fetch(import.meta.env.BASE_URL+'fonts/official-sources.json')
+    if(!response.ok)return
+    const data:unknown=await response.json()
+    if(!data || typeof data!=='object' || Array.isArray(data))return
+    for(const [id,url] of Object.entries(data)){
+      if(typeof url!=='string' || !/^[a-z0-9-]+$/.test(id))continue
+      const parsed=new URL(url)
+      if(parsed.protocol!=='https:' || parsed.hostname!=='raw.githubusercontent.com')continue
+      officialSources[id]=url
+    }
+  }catch{ /* Static preview and the official homepages remain accessible. */ }
+}
 const selection = ref<string[]>(['noto-sans-sc','zcool-xiaowei'])
 function stored<T>(key:string,fallback:T):T {
   try { const item = localStorage.getItem(key); return item ? JSON.parse(item) as T : fallback } catch { return fallback }
@@ -57,6 +72,8 @@ function previewText(font:FontRecord) {
 function available(font:FontRecord) { return Boolean(localFamily[font.id]) || (font.source==='bundled' && fontStatus[font.id]==='ready') }
 function downloadExt(font:FontRecord){return ['gensen','genyo-gothic'].includes(font.id)?'otf':'ttf'}
 function downloadUrl(font:FontRecord){return import.meta.env.BASE_URL+'fonts/'+font.id+'/download.'+downloadExt(font)}
+function upstreamDownloadUrl(font:FontRecord){return officialSources[font.id] || font.url}
+function hasDirectUpstream(font:FontRecord){return Boolean(officialSources[font.id])}
 function licenseUrl(font:FontRecord){return import.meta.env.BASE_URL+'fonts/'+font.id+'/OFL.txt'}
 function fontFamilyFor(font:FontRecord) {
   return available(font) ? '"' + (localFamily[font.id] || font.family) + '", sans-serif' : 'inherit'
@@ -192,6 +209,7 @@ function keydown(event:KeyboardEvent){
 onMounted(()=>{
   dark.value=stored('fontfolio:theme',false)
   void restoreLocalFonts()
+  void loadOfficialSources()
   if('IntersectionObserver' in window){
     observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){const font=targets.get(entry.target);if(font)ensureFont(font);observer?.unobserve(entry.target)}},{rootMargin:'240px'})
     for(const el of targets.keys())observer.observe(el)
@@ -250,7 +268,7 @@ watch(detail,(value)=>{document.body.style.overflow=value?'hidden':''})
             <div class="filter-chips"><button v-for="cat in categories" :key="cat" type="button" :class="{active:activeFilter===cat}" @click="changeFilter(cat)">{{cat==='全部'?'全部字体':cat==='收藏'?'♡ 收藏':cat}}</button></div>
             <div v-if="filtered.length" class="font-grid">
               <article v-for="font in filtered" :key="font.id" v-visible="font" class="font-card" tabindex="0" @click="showFont(font)" @keydown.enter="showFont(font)">
-                <div class="font-card-top"><div><span class="card-number">{{ String(fontList.indexOf(font)+1).padStart(2,'0') }}</span><span class="card-tag">{{font.category}}</span></div><div class="card-actions"><a v-if="font.source==='bundled'" class="card-download" :href="downloadUrl(font)" :download="font.name+'.'+downloadExt(font)" :aria-label="'下载 '+font.name" :title="'下载字体文件（'+downloadExt(font).toUpperCase()+'）'" @click.stop><Download :size="16"/></a><button type="button" class="favorite-button" :aria-label="favorites.includes(font.id)?'取消收藏':'收藏字体'" @click.stop="toggleFavorite(font.id)"><Heart :size="17" :fill="favorites.includes(font.id)?'currentColor':'none'"/></button></div></div>
+                <div class="font-card-top"><div><span class="card-number">{{ String(fontList.indexOf(font)+1).padStart(2,'0') }}</span><span class="card-tag">{{font.category}}</span></div><div class="card-actions"><a v-if="font.source==='bundled'" class="card-official" :href="upstreamDownloadUrl(font)" target="_blank" rel="noopener noreferrer" :aria-label="'查看 '+font.name+' 官方原始字体下载'" :title="hasDirectUpstream(font)?'从上游官方仓库下载原始字体':'查看官方字体项目及下载页面'" @click.stop><ExternalLink :size="15"/></a><a v-if="font.source==='bundled'" class="card-download" :href="downloadUrl(font)" :download="font.name+'.'+downloadExt(font)" :aria-label="'本站下载 '+font.name" :title="'本站下载 '+downloadExt(font).toUpperCase()+' 字体文件'" @click.stop><Download :size="16"/></a><button type="button" class="favorite-button" :aria-label="favorites.includes(font.id)?'取消收藏':'收藏字体'" @click.stop="toggleFavorite(font.id)"><Heart :size="17" :fill="favorites.includes(font.id)?'currentColor':'none'"/></button></div></div>
                 <div class="card-sample-wrap"><AutoFitSample
                   :text="previewText(font)"
                   :font-family="fontFamilyFor(font)"
@@ -282,10 +300,10 @@ watch(detail,(value)=>{document.body.style.overflow=value?'hidden':''})
       <section class="font-modal" role="dialog" aria-modal="true" :aria-label="'字体详情 '+detail.name">
         <div class="modal-top"><div><span class="eyebrow">FONT DETAILS / {{detail.category.toUpperCase()}}</span><h2>{{detail.name}}</h2><p>{{detail.nativeName}} · {{detail.mood}}</p></div><button type="button" class="modal-close" aria-label="关闭详情" @click="detail=null"><X :size="20"/></button></div>
         <div v-visible="detail" class="modal-specimen" :style="{...styleFor(detail),fontSize:'clamp(35px, 6vw, 75px)'}">{{previewText(detail)}}</div>
-        <div class="modal-actions"><a v-if="detail.source==='bundled'" class="font-file-download" :href="downloadUrl(detail)" :download="detail.name+'.'+downloadExt(detail)"><Download :size="17"/> 下载字体 {{downloadExt(detail).toUpperCase()}}</a><a v-if="detail.source==='bundled'" class="font-license-download" :href="licenseUrl(detail)" target="_blank" rel="noopener noreferrer">查看 OFL 授权文件 <ExternalLink :size="15"/></a><button type="button" :class="{marked:favorites.includes(detail.id)}" @click="toggleFavorite(detail.id)"><Heart :size="17" :fill="favorites.includes(detail.id)?'currentColor':'none'"/> {{favorites.includes(detail.id)?'已收藏':'添加收藏'}}</button><button type="button" @click="toggleCompare(detail.id)"><Columns2 :size="17"/> {{selection.includes(detail.id)?'从对比移除':'加入对比'}}</button><button type="button" @click="copyCss(detail)"><Copy :size="17"/> 复制 CSS</button><button v-if="detail.source==='manual'" type="button" @click="upload(detail.id)"><UploadCloud :size="17"/> {{available(detail)?'重新导入字库':'导入字库'}}</button><button v-if="localOrigin[detail.id]==='imported'" type="button" @click="forgetLocalFont(detail.id)"><X :size="16"/> 清除本地字库</button></div>
+        <div class="modal-actions"><a v-if="detail.source==='bundled'" class="font-file-download" :href="downloadUrl(detail)" :download="detail.name+'.'+downloadExt(detail)"><Download :size="17"/> 本站下载 {{downloadExt(detail).toUpperCase()}}</a><a v-if="detail.source==='bundled'" class="font-upstream-download" :href="upstreamDownloadUrl(detail)" target="_blank" rel="noopener noreferrer"><ExternalLink :size="16"/> {{hasDirectUpstream(detail)?'官方原始字体下载':'官方字体下载页面'}}</a><a v-if="detail.source==='bundled'" class="font-license-download" :href="licenseUrl(detail)" target="_blank" rel="noopener noreferrer">查看 OFL 授权文件 <ExternalLink :size="15"/></a><button type="button" :class="{marked:favorites.includes(detail.id)}" @click="toggleFavorite(detail.id)"><Heart :size="17" :fill="favorites.includes(detail.id)?'currentColor':'none'"/> {{favorites.includes(detail.id)?'已收藏':'添加收藏'}}</button><button type="button" @click="toggleCompare(detail.id)"><Columns2 :size="17"/> {{selection.includes(detail.id)?'从对比移除':'加入对比'}}</button><button type="button" @click="copyCss(detail)"><Copy :size="17"/> 复制 CSS</button><button v-if="detail.source==='manual'" type="button" @click="upload(detail.id)"><UploadCloud :size="17"/> {{available(detail)?'重新导入字库':'导入字库'}}</button><button v-if="localOrigin[detail.id]==='imported'" type="button" @click="forgetLocalFont(detail.id)"><X :size="16"/> 清除本地字库</button></div>
         <div class="modal-info"><div><span class="info-label">TYPE CATEGORY</span><strong>{{detail.category}}</strong></div><div><span class="info-label">LANGUAGE</span><strong>{{detail.languages}}</strong></div><div><span class="info-label">FONT LICENSE</span><strong>{{detail.license}}</strong></div><div><span class="info-label">PREVIEW STATE</span><strong>{{localOrigin[detail.id]==='installed'?'系统已安装字体':localOrigin[detail.id]==='imported'?'本地字体文件已加载':available(detail)?'本站自托管字体已加载':'备用字体 / 需要导入'}}</strong></div></div>
         <p class="modal-description">{{detail.description}} <span v-if="detail.source==='manual'">公开可下载不代表可以任意商用或再分发，请核对权利人的具体许可条款。</span><span v-else-if="detail.source==='bundled'"> 本站提供原版 TTF/OTF 及对应 OFL.txt，请在下载和使用前阅读版权声明。</span></p>
-        <a v-if="detail.url!=='#'" :href="detail.url" target="_blank" rel="noopener noreferrer" class="source-button">查看字体来源和授权 <ExternalLink :size="16"/></a>
+        <a v-if="detail.url!=='#'" :href="detail.url" target="_blank" rel="noopener noreferrer" class="source-button">{{detail.source==='manual'?'前往官方字体页面 · 了解下载与使用授权':'访问字体官网 / 开源项目'}} <ExternalLink :size="16"/></a>
       </section>
     </div>
     <input ref="uploadInput" type="file" accept=".ttf,.otf,.woff,.woff2" hidden @change="handleUpload"/>

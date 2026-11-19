@@ -155,6 +155,19 @@ async function main() {
   mkdirSync(root,{recursive:true})
   await pool(FONTS,bundle,2)
   await pool(OTHER_OFL,bundleOriginal,2)
-  console.log('[font] '+(FONTS.length+OTHER_OFL.length)+' OFL families ready')
+  // One authoritative source for both packaged binaries and upstream links:
+  // the UI reads this JSON to offer official upstream downloads.
+  const upstreamFiles=Object.fromEntries([
+    ...FONTS.map(([id,slug,file])=>[
+      id, 'https://raw.githubusercontent.com/google/fonts/main/ofl/'+slug+'/'+encodeURIComponent(file)
+    ]),
+    ...OTHER_OFL.map(({id,source})=>[id,source])
+  ])
+  const bundledCount=FONTS.length+OTHER_OFL.length
+  if(Object.keys(upstreamFiles).length!==bundledCount){
+    throw new Error('Duplicate font id in upstream download registry')
+  }
+  writeFileSync(join(root,'official-sources.json'),JSON.stringify(upstreamFiles,null,2)+'\n')
+  console.log('[font] '+bundledCount+' OFL families ready, official download links generated')
 }
 main().catch(error=>{console.error(error);process.exitCode=1})
