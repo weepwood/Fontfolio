@@ -20,18 +20,18 @@ const rows = [
     "圆体",
     "中英",
     "温柔 · 圆润",
-    "manual",
+    "bundled",
     "SIL OFL 1.1",
     "https://github.com/lxgw/975Yuan"
   ],
   [
     "gensen",
     "GenSen Rounded",
-    "源泉圆体",
+    "源泉圆体（TC 繁中版）",
     "圆体",
     "中日",
     "亲和 · 圆润",
-    "manual",
+    "bundled",
     "SIL OFL 1.1",
     "https://github.com/ButTaiwan/gensen-font"
   ],
@@ -243,5 +243,5 @@ const rows = [
     "https://fonts.google.com/specimen/Bungee"
   ]
 ] as string[][]
-export const fonts: FontRecord[] = rows.map(row => { const [id,name,nativeName,category,languages,mood,source,license,url] = row; return { id,name,nativeName,category:category as FontCategory,languages,mood,source:source as Source,license,url,family:name,description:source === 'manual' ? '该字体未获明确再分发授权，可本地导入合法取得的字库。' : '本站已自托管开源字体，可下载完整 TTF 字库和对应的许可证。' } })
+export const fonts: FontRecord[] = rows.map(row => { const [id,name,nativeName,category,languages,mood,source,license,url] = row; return { id,name,nativeName,category:category as FontCategory,languages,mood,source:source as Source,license,url,family:name,description:source === 'manual' ? '当前仅展示资料，可本地导入合法取得的字库，具体授权以字体官方说明为准。' : '本站自托管开源字体，可下载原版字库及其 OFL 许可证。' } })
 export const categories = ['全部','圆体','无衬线','衬线','展示','手写','等宽','收藏'] as const
