@@ -3,3 +3,6 @@ dist/
 .DS_Store
 *.local
 .vscode/
+
+# Generated at build time from the official OFL upstreams
+/public/fonts/

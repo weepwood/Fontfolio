@@ -23,6 +23,11 @@ jobs:
           node-version: '22'
       - name: Install dependencies
         run: npm install --no-audit --no-fund
+      - name: Cache bundled open-source fonts
+        uses: actions/cache@v4
+        with:
+          path: public/fonts
+          key: ${{ runner.os }}-bundled-fonts-v1-${{ hashFiles('scripts/bundle-fonts.mjs', 'src/data/fonts.ts') }}
       - uses: actions/configure-pages@v5
       - name: Build site
         env:

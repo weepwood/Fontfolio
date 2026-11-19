@@ -1,5 +1,5 @@
 export type FontCategory = '圆体' | '无衬线' | '衬线' | '展示' | '手写' | '等宽'
-export type Source = 'google' | 'manual' | 'uploaded'
+export type Source = 'bundled' | 'manual' | 'uploaded'
 export type FontRecord = { id:string; name:string; nativeName:string; category:FontCategory; languages:string; mood:string; source:Source; license:string; url:string; family:string; description:string }
 const rows = [
   [
@@ -53,7 +53,7 @@ const rows = [
     "无衬线",
     "中英",
     "中性 · 专业",
-    "google",
+    "bundled",
     "SIL OFL 1.1",
     "https://fonts.google.com/noto/specimen/Noto+Sans+SC"
   ],
@@ -64,7 +64,7 @@ const rows = [
     "衬线",
     "中英",
     "文化 · 阅读",
-    "google",
+    "bundled",
     "SIL OFL 1.1",
     "https://fonts.google.com/noto/specimen/Noto+Serif+SC"
   ],
@@ -75,7 +75,7 @@ const rows = [
     "展示",
     "中英",
     "快乐 · 活泼",
-    "google",
+    "bundled",
     "SIL OFL 1.1",
     "https://fonts.google.com/specimen/ZCOOL+KuaiLe"
   ],
@@ -86,7 +86,7 @@ const rows = [
     "衬线",
     "中英",
     "优雅 · 创意",
-    "google",
+    "bundled",
     "SIL OFL 1.1",
     "https://fonts.google.com/specimen/ZCOOL+XiaoWei"
   ],
@@ -97,7 +97,7 @@ const rows = [
     "展示",
     "中英",
     "复古 · 醒目",
-    "google",
+    "bundled",
     "SIL OFL 1.1",
     "https://fonts.google.com/specimen/ZCOOL+QingKe+HuangYou"
   ],
@@ -108,7 +108,7 @@ const rows = [
     "手写",
     "中文",
     "书法 · 东方",
-    "google",
+    "bundled",
     "SIL OFL 1.1",
     "https://fonts.google.com/specimen/Ma+Shan+Zheng"
   ],
@@ -119,7 +119,7 @@ const rows = [
     "手写",
     "中文",
     "自由 · 洒脱",
-    "google",
+    "bundled",
     "SIL OFL 1.1",
     "https://fonts.google.com/specimen/Long+Cang"
   ],
@@ -130,7 +130,7 @@ const rows = [
     "手写",
     "中文",
     "东方 · 手写",
-    "google",
+    "bundled",
     "SIL OFL 1.1",
     "https://fonts.google.com/specimen/Zhi+Mang+Xing"
   ],
@@ -141,7 +141,7 @@ const rows = [
     "无衬线",
     "英文",
     "现代 · UI",
-    "google",
+    "bundled",
     "SIL OFL 1.1",
     "https://fonts.google.com/specimen/Inter"
   ],
@@ -152,7 +152,7 @@ const rows = [
     "无衬线",
     "英文",
     "清爽 · 几何",
-    "google",
+    "bundled",
     "SIL OFL 1.1",
     "https://fonts.google.com/specimen/DM+Sans"
   ],
@@ -163,7 +163,7 @@ const rows = [
     "无衬线",
     "英文",
     "科技 · 个性",
-    "google",
+    "bundled",
     "SIL OFL 1.1",
     "https://fonts.google.com/specimen/Space+Grotesk"
   ],
@@ -174,7 +174,7 @@ const rows = [
     "无衬线",
     "英文",
     "简洁 · 圆润",
-    "google",
+    "bundled",
     "SIL OFL 1.1",
     "https://fonts.google.com/specimen/Outfit"
   ],
@@ -185,7 +185,7 @@ const rows = [
     "衬线",
     "英文",
     "优雅 · 杂志",
-    "google",
+    "bundled",
     "SIL OFL 1.1",
     "https://fonts.google.com/specimen/Playfair+Display"
   ],
@@ -196,7 +196,7 @@ const rows = [
     "衬线",
     "英文",
     "复古 · 精致",
-    "google",
+    "bundled",
     "SIL OFL 1.1",
     "https://fonts.google.com/specimen/Fraunces"
   ],
@@ -207,7 +207,7 @@ const rows = [
     "圆体",
     "英文",
     "亲切 · 几何",
-    "google",
+    "bundled",
     "SIL OFL 1.1",
     "https://fonts.google.com/specimen/Rubik"
   ],
@@ -218,10 +218,30 @@ const rows = [
     "等宽",
     "英文",
     "技术 · 理性",
-    "google",
+    "bundled",
     "SIL OFL 1.1",
     "https://fonts.google.com/specimen/IBM+Plex+Mono"
+  ],
+  [
+    "baloo-2","Baloo 2","Baloo 2","圆体","英文",
+    "可爱 · 活泼","bundled","SIL OFL 1.1",
+    "https://fonts.google.com/specimen/Baloo+2"
+  ],
+  [
+    "fredoka","Fredoka","Fredoka","圆体","英文",
+    "圆润 · 游戏","bundled","SIL OFL 1.1",
+    "https://fonts.google.com/specimen/Fredoka"
+  ],
+  [
+    "montserrat","Montserrat","Montserrat","无衬线","英文",
+    "清晰 · 现代","bundled","SIL OFL 1.1",
+    "https://fonts.google.com/specimen/Montserrat"
+  ],
+  [
+    "bungee","Bungee","Bungee","展示","英文",
+    "醒目 · 标题","bundled","SIL OFL 1.1",
+    "https://fonts.google.com/specimen/Bungee"
   ]
 ] as string[][]
-export const fonts: FontRecord[] = rows.map(row => { const [id,name,nativeName,category,languages,mood,source,license,url] = row; return { id,name,nativeName,category:category as FontCategory,languages,mood,source:source as Source,license,url,family:name,description:source === 'manual' ? '该字体不随项目分发。如已合法获得字体文件，可在本地导入预览。' : '支持在线按需加载的字体，可通过官方来源进一步了解使用许可。' } })
+export const fonts: FontRecord[] = rows.map(row => { const [id,name,nativeName,category,languages,mood,source,license,url] = row; return { id,name,nativeName,category:category as FontCategory,languages,mood,source:source as Source,license,url,family:name,description:source === 'manual' ? '该字体未获明确再分发授权，可本地导入合法取得的字库。' : '本站已自托管开源字体，可下载完整 TTF 字库和对应的许可证。' } })
 export const categories = ['全部','圆体','无衬线','衬线','展示','手写','等宽','收藏'] as const
