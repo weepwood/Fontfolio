@@ -2,6 +2,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, reactive } from 'vue'
 import { ArrowRight, ArrowUpRight, Check, Columns2, Copy, Download, ExternalLink, Github, Heart, LayoutGrid, Menu, Moon, Plus, Search, SlidersHorizontal, Sun, Type, UploadCloud, X } from 'lucide-vue-next'
 import { categories, fonts as initialFonts, type FontRecord, type FontCategory } from './data/fonts'
+import { deleteSavedFont, loadSavedFonts, saveFont, type SavedFont } from './lib/local-fonts'
 
 type Filter = FontCategory | '全部' | '收藏'
 type Page = 'gallery' | 'compare'
@@ -26,6 +27,8 @@ const searchInput = ref<HTMLInputElement | null>(null)
 const uploadInput = ref<HTMLInputElement | null>(null)
 const uploadTarget = ref<string | null>(null)
 const localFamily = reactive<Record<string,string>>({})
+const localOrigin = reactive<Record<string,'installed'|'imported'>>({})
+const activeFaces = new Map<string,FontFace>()
 const fontStatus = reactive<Record<string,Status>>({})
 const selection = ref<string[]>(['noto-sans-sc','zcool-xiaowei'])
 function stored<T>(key:string,fallback:T):T {
@@ -74,36 +77,105 @@ function toggleCompare(id:string){
   selection.value=selection.value.length<3?[...selection.value,id]:[...selection.value.slice(1),id]
 }
 function showFont(font:FontRecord){detail.value=font;ensureFont(font)}
+async function activateFont(id:string,buffer:ArrayBuffer){
+  const family='FontfolioLocal_'+id.replace(/[^a-zA-Z0-9]/g,'_')
+  const face=new FontFace(family,buffer)
+  await face.load()
+  const previous=activeFaces.get(id)
+  if(previous)document.fonts.delete(previous)
+  document.fonts.add(face)
+  activeFaces.set(id,face)
+  localFamily[id]=family
+  localOrigin[id]='imported'
+}
+async function detectInstalledBlueaka(){
+  if(localFamily.blueaka || typeof FontFace==='undefined')return
+  // CSS local() uses locally installed fonts without downloading or uploading files.
+  for(const name of ['Blueaka','Blueaka Regular']){
+    const face=new FontFace('FontfolioInstalledBlueaka','local("'+name+'")')
+    try{
+      await face.load()
+      document.fonts.add(face)
+      activeFaces.set('blueaka',face)
+      localFamily.blueaka='FontfolioInstalledBlueaka'
+      localOrigin.blueaka='installed'
+      return
+    }catch{ /* Font is not installed or local font access is unavailable. */ }
+  }
+}
+async function restoreLocalFonts(){
+  try{
+    const saved=await loadSavedFonts()
+    for(const entry of saved){
+      if(typeof entry.id!=='string'||!entry.data)continue
+      try{
+        await activateFont(entry.id,entry.data)
+        if(entry.id.startsWith('local-')&&!fontList.value.some(font=>font.id===entry.id)){
+          fontList.value.unshift({
+            id:entry.id,name:entry.label,nativeName:'本地字体',category:'展示',
+            languages:'中英',mood:'个人字库 · 本地保存',source:'uploaded',
+            license:'请自行确认授权',url:'#',family:entry.label,
+            description:'字体文件存储在此浏览器的 IndexedDB 中，不会发送到 Fontfolio 服务器。'
+          })
+        }
+      }catch{ /* Skip unsupported or damaged cached fonts. */ }
+    }
+  }catch{ /* Private browsing may disable IndexedDB; manual import still works in memory. */ }
+  await detectInstalledBlueaka()
+}
+async function forgetLocalFont(id:string){
+  const face=activeFaces.get(id)
+  if(face){document.fonts.delete(face);activeFaces.delete(id)}
+  delete localFamily[id]
+  delete localOrigin[id]
+  try{await deleteSavedFont(id)}catch{}
+  if(id.startsWith('local-')){
+    fontList.value=fontList.value.filter(font=>font.id!==id)
+    favorites.value=favorites.value.filter(item=>item!==id)
+    selection.value=selection.value.filter(item=>item!==id)
+    detail.value=null
+  }
+  notice.value='已清除本地字体文件及其预览记录。'
+}
 function upload(id?:string){uploadTarget.value=id||null;uploadInput.value?.click()}
 async function handleUpload(event:Event){
   const input=event.target as HTMLInputElement
   const file=input.files?.[0]
   input.value=''
   if(!file)return
-  if(!/\.(ttf|otf|woff2?)$/i.test(file.name)||file.size>32*1024*1024){notice.value='请选择 32 MB 以内的 TTF、OTF、WOFF 或 WOFF2 字体文件。';return}
-  const objectUrl=URL.createObjectURL(file)
-  const name='FontfolioLocal_'+crypto.randomUUID().replace(/-/g,'')
+  if(!/\\.(ttf|otf|woff2?)$/i.test(file.name)||file.size>32*1024*1024){
+    notice.value='请选择 32 MB 以内的 TTF、OTF、WOFF 或 WOFF2 字体文件。'
+    uploadTarget.value=null
+    return
+  }
+  const id=uploadTarget.value||'local-'+crypto.randomUUID()
+  const label=file.name.replace(/\\.(ttf|otf|woff2?)$/i,'')
   try{
-    const face=new FontFace(name,'url("'+objectUrl+'")')
-    await face.load()
-    document.fonts.add(face)
-    if(uploadTarget.value){
-      localFamily[uploadTarget.value]=name
-      notice.value='本地字体已加载，可以预览。'
-    }else{
-      const label=file.name.replace(/\.(ttf|otf|woff2?)$/i,'')
-      const id='local-'+crypto.randomUUID()
-      fontList.value.unshift({id,name:label,nativeName:'本地字体',category:'展示',languages:'中英',mood:'当前会话 · 本地预览',source:'uploaded',license:'请自行确认授权',url:'#',family:name,description:'仅在当前浏览器内存中使用，不会发送到服务器。'})
-      localFamily[id]=name
+    const data=await file.arrayBuffer()
+    await activateFont(id,data)
+    if(!uploadTarget.value){
+      fontList.value.unshift({
+        id,name:label,nativeName:'本地字体',category:'展示',languages:'中英',
+        mood:'个人字库 · 本地保存',source:'uploaded',license:'请自行确认授权',
+        url:'#',family:label,
+        description:'字体文件仅保存在本浏览器的 IndexedDB，不会上传到服务器。'
+      })
       activeFilter.value='全部'
       currentPage.value='gallery'
       search.value=''
-      notice.value='已导入 '+label+'，刷新后需重新导入。'
       await nextTick()
-      window.scrollTo({top:0,behavior:'smooth'})
     }
-  }catch{notice.value='无法读取字体文件，请确认其格式或完整性。'}
-  finally{URL.revokeObjectURL(objectUrl);uploadTarget.value=null}
+    try{
+      const saved:SavedFont={id,label,data}
+      await saveFont(saved)
+      notice.value=uploadTarget.value
+        ? '已从本地加载 '+file.name+'，并保存到当前浏览器。请确认所选字库与字体名称相符。'
+        : '已导入 '+label+'，刷新后仍可在当前浏览器使用。'
+    }catch{
+      notice.value='字体已成功加载，但浏览器存储不可用；刷新后需要重新导入。'
+    }
+  }catch{notice.value='无法读取字体文件，请确认格式和文件完整性。'}
+  finally{uploadTarget.value=null}
 }
 async function copyCss(font:FontRecord){
   try {await navigator.clipboard.writeText('font-family: "'+font.family+'", sans-serif;');notice.value='字体 CSS 已复制。'}
@@ -117,6 +189,7 @@ function keydown(event:KeyboardEvent){
 }
 onMounted(()=>{
   dark.value=stored('fontfolio:theme',false)
+  void restoreLocalFonts()
   if('IntersectionObserver' in window){
     observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){const font=targets.get(entry.target);if(font)ensureFont(font);observer?.unobserve(entry.target)}},{rootMargin:'240px'})
     for(const el of targets.keys())observer.observe(el)
@@ -176,7 +249,7 @@ watch(detail,(value)=>{document.body.style.overflow=value?'hidden':''})
             <div v-if="filtered.length" class="font-grid">
               <article v-for="font in filtered" :key="font.id" v-visible="font" class="font-card" tabindex="0" @click="showFont(font)" @keydown.enter="showFont(font)">
                 <div class="font-card-top"><div><span class="card-number">{{ String(fontList.indexOf(font)+1).padStart(2,'0') }}</span><span class="card-tag">{{font.category}}</span></div><button type="button" class="favorite-button" :aria-label="favorites.includes(font.id)?'取消收藏':'收藏字体'" @click.stop="toggleFavorite(font.id)"><Heart :size="17" :fill="favorites.includes(font.id)?'currentColor':'none'"/></button></div>
-                <div class="card-sample-wrap"><div class="card-sample" :style="{...styleFor(font),fontSize:'clamp(30px, 3vw, 46px)'}">{{ font.languages==='英文'?'AaBb':font.nativeName.length>9?'字形之间':font.nativeName.slice(0,4) }}</div><div v-if="font.source==='manual' && !available(font)" class="needs-font">可导入字体预览</div><div v-else-if="fontStatus[font.id]==='error' && !available(font)" class="needs-font">加载失败 · 显示备用字体</div></div>
+                <div class="card-sample-wrap"><div class="card-sample" :style="{...styleFor(font),fontSize:'clamp(28px, 3vw, 48px)'}">{{ previewText(font) }}</div><div v-if="font.source==='manual' && !available(font)" class="needs-font">未加载字库 · 当前显示备用字体</div><div v-else-if="fontStatus[font.id]==='error' && !available(font)" class="needs-font">加载失败 · 当前显示备用字体</div><div v-else-if="font.source==='manual' && localOrigin[font.id]" class="needs-font font-loaded">{{localOrigin[font.id]==='installed'?'✓ 已识别本机字库':'✓ 本地字库已加载'}}</div><button v-if="font.id==='blueaka' && !available(font)" class="inline-font-upload" type="button" @click.stop="upload(font.id)"><UploadCloud :size="13"/> 导入 Blueaka.ttf</button></div>
                 <div class="font-card-footer"><div><h3>{{font.name}}</h3><p>{{font.nativeName}} · {{font.mood}}</p></div><ArrowUpRight :size="18"/></div>
               </article>
             </div>
@@ -199,9 +272,10 @@ watch(detail,(value)=>{document.body.style.overflow=value?'hidden':''})
     <div v-if="detail" class="modal-backdrop" @click.self="detail=null">
       <section class="font-modal" role="dialog" aria-modal="true" :aria-label="'字体详情 '+detail.name">
         <div class="modal-top"><div><span class="eyebrow">FONT DETAILS / {{detail.category.toUpperCase()}}</span><h2>{{detail.name}}</h2><p>{{detail.nativeName}} · {{detail.mood}}</p></div><button type="button" class="modal-close" aria-label="关闭详情" @click="detail=null"><X :size="20"/></button></div>
+        <p v-if="detail.id==='blueaka' && !available(detail)" class="blueaka-help">Blueaka 没有随网站公开分发。安装字体后重新打开页面，或点击下方「导入字库」，选择合法取得的 <strong>Blueaka.ttf</strong>。导入后将保存在当前浏览器中。</p>
         <div v-visible="detail" class="modal-specimen" :style="{...styleFor(detail),fontSize:'clamp(35px, 6vw, 75px)'}">{{previewText(detail)}}</div>
-        <div class="modal-actions"><button type="button" :class="{marked:favorites.includes(detail.id)}" @click="toggleFavorite(detail.id)"><Heart :size="17" :fill="favorites.includes(detail.id)?'currentColor':'none'"/> {{favorites.includes(detail.id)?'已收藏':'添加收藏'}}</button><button type="button" @click="toggleCompare(detail.id)"><Columns2 :size="17"/> {{selection.includes(detail.id)?'从对比移除':'加入对比'}}</button><button type="button" @click="copyCss(detail)"><Copy :size="17"/> 复制 CSS</button><button v-if="detail.source!=='google' && !available(detail)" type="button" @click="upload(detail.id)"><UploadCloud :size="17"/> 导入字库</button></div>
-        <div class="modal-info"><div><span class="info-label">TYPE CATEGORY</span><strong>{{detail.category}}</strong></div><div><span class="info-label">LANGUAGE</span><strong>{{detail.languages}}</strong></div><div><span class="info-label">FONT LICENSE</span><strong>{{detail.license}}</strong></div><div><span class="info-label">PREVIEW STATE</span><strong>{{available(detail)?'真实字形已加载':'备用字形 / 需要导入'}}</strong></div></div>
+        <div class="modal-actions"><button type="button" :class="{marked:favorites.includes(detail.id)}" @click="toggleFavorite(detail.id)"><Heart :size="17" :fill="favorites.includes(detail.id)?'currentColor':'none'"/> {{favorites.includes(detail.id)?'已收藏':'添加收藏'}}</button><button type="button" @click="toggleCompare(detail.id)"><Columns2 :size="17"/> {{selection.includes(detail.id)?'从对比移除':'加入对比'}}</button><button type="button" @click="copyCss(detail)"><Copy :size="17"/> 复制 CSS</button><button v-if="detail.source==='manual'" type="button" @click="upload(detail.id)"><UploadCloud :size="17"/> {{available(detail)?'重新导入字库':'导入字库'}}</button><button v-if="localOrigin[detail.id]==='imported'" type="button" @click="forgetLocalFont(detail.id)"><X :size="16"/> 清除本地字库</button></div>
+        <div class="modal-info"><div><span class="info-label">TYPE CATEGORY</span><strong>{{detail.category}}</strong></div><div><span class="info-label">LANGUAGE</span><strong>{{detail.languages}}</strong></div><div><span class="info-label">FONT LICENSE</span><strong>{{detail.license}}</strong></div><div><span class="info-label">PREVIEW STATE</span><strong>{{localOrigin[detail.id]==='installed'?'系统已安装字体':localOrigin[detail.id]==='imported'?'本地字体文件已加载':available(detail)?'在线字体已加载':'备用字体 / 需要导入'}}</strong></div></div>
         <p class="modal-description">{{detail.description}} <span v-if="detail.source==='manual'">公开可下载不代表可以任意商用或再分发，请核对权利人的具体许可条款。</span></p>
         <a v-if="detail.url!=='#'" :href="detail.url" target="_blank" rel="noopener noreferrer" class="source-button">查看字体来源和授权 <ExternalLink :size="16"/></a>
       </section>
