@@ -32,8 +32,8 @@ const rows = [
     "中英",
     "现代 · 精准",
     "manual",
-    "专有许可",
-    "https://hyperos.mi.com/font/zh/"
+    "小米专有许可 · 不得独立再分发",
+    "https://hyperos.mi.com/font/download"
   ],
   [
     "harmonyos-sans",
@@ -44,7 +44,31 @@ const rows = [
     "系统 · 清晰",
     "manual",
     "华为专有许可 · 不得独立再分发",
-    "https://developer.huawei.com/consumer/cn/doc/design-guides/font-0000001828772001/"
+    "https://developer.huawei.com/consumer/cn/design/resource/"
+  ],
+  [
+    "misans-tc", "MiSans TC", "小米字体 · 繁体中文版",
+    "无衬线", "中英", "繁体 · 屏显", "manual",
+    "小米专有许可 · 不得独立再分发",
+    "https://hyperos.mi.com/font/download"
+  ],
+  [
+    "misans-latin", "MiSans Latin", "小米字体 · 拉丁文字版",
+    "无衬线", "英文", "几何 · 多语言", "manual",
+    "小米专有许可 · 不得独立再分发",
+    "https://hyperos.mi.com/font/download"
+  ],
+  [
+    "misans-l3", "MiSans L3", "小米字体 · 生僻字扩展",
+    "无衬线", "中文", "生僻字 · 扩展", "manual",
+    "小米专有许可 · 不得独立再分发",
+    "https://hyperos.mi.com/font/download"
+  ],
+  [
+    "harmonyos-sans-sc", "HarmonyOS Sans SC", "鸿蒙黑体 · 简体中文",
+    "无衬线", "中英", "中文 · 系统设计", "manual",
+    "华为专有许可 · 不得独立分发",
+    "https://developer.huawei.com/consumer/cn/design/resource/"
   ],
   [
     "noto-sans-sc",
@@ -303,5 +327,5 @@ const rows = [
     "https://github.com/ButTaiwan/genyog-font"
   ]
 ] as string[][]
-export const fonts: FontRecord[] = rows.map(row => { const [id,name,nativeName,category,languages,mood,source,license,url] = row; return { id,name,nativeName,category:category as FontCategory,languages,mood,source:source as Source,license,url,family:name,description:source === 'manual' ? '非开源再分发字体。本站仅保留官方来源、授权信息和用户本地导入预览，不托管字体副本。' : '本站自托管开源字体，可下载原版字库及其 OFL 许可证。' } })
+export const fonts: FontRecord[] = rows.map(row => { const [id,name,nativeName,category,languages,mood,source,license,url] = row; return { id,name,nativeName,category:category as FontCategory,languages,mood,source:source as Source,license,url,family:name,description:source === 'manual' ? '厂商官方字体系列，可从官网下载；支持识别本机字体或导入本地字库预览，本站不重新分发其字体文件。' : '本站自托管开源字体，可下载原版字库及其 OFL 许可证。' } })
 export const categories = ['全部','圆体','无衬线','衬线','展示','手写','等宽','收藏'] as const

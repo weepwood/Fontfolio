@@ -48,3 +48,14 @@
 .modal-actions .font-upstream-download{border:1px solid var(--border);border-radius:7px;padding:10px 13px;display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:640;text-decoration:none}
 .modal-actions .font-upstream-download:hover{background:var(--selected);color:var(--accent)}
 @media(max-width:600px){.modal-actions .font-upstream-download{flex:1;justify-content:center}}
+
+/* Distinguish self-hosted OFL fonts from official-only proprietary families. */
+.source-wrap{min-width:123px}
+.card-actions button.card-download{background:transparent;border:0;cursor:pointer;color:var(--muted)}
+.card-actions button.card-download:hover{color:var(--accent);background:var(--selected)}
+@media(max-width:660px){
+ .browser-toolbar{flex-wrap:wrap}
+ .browser-toolbar .search-box{flex-basis:100%}
+ .browser-toolbar .select-wrap{flex:1;min-width:0}
+ .browser-toolbar .result-count{display:none}
+}

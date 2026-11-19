@@ -6,14 +6,14 @@
 
 ## 字体目录
 
-- **36 款字体资料**，其中 **34 款 SIL OFL 1.1 开源字体**由本站托管，提供真实预览、完整 TTF/OTF 字库下载和相应许可证。
+- **40 款字体资料**，其中 **34 款 SIL OFL 1.1 开源字体**由本站托管，提供真实预览、完整 TTF/OTF 字库下载和相应许可证。
 - 新增 12 款：思源黑体繁体/日文/韩文、Zen Maru Gothic、Zen Kaku Gothic New、Kaisei Decol、IBM Plex Sans JP、JetBrains Mono、Unbounded、Instrument Serif、霞鹜文楷、源样黑体。
 - 已有思源黑体简体（Noto Sans SC）、思源宋体、站酷系列、霞鹜 975 圆体、源泉圆体、Inter 等保留。
-- **HarmonyOS Sans / 鸿蒙字体和 MiSans / 小米字体**：不是 SIL OFL，许可不支持本站单独分发字体文件；展示官方介绍链接，并支持用户导入自己合法取得的字库进行本地预览。
+- **MiSans、HarmonyOS Sans 及其系列变体（6 个条目）**：采用厂商专有许可，不能在字体目录网站独立再分发字库。本站提供官方下载入口、本机字体检测和本地导入预览。
 
 ## 功能
 
-- 搜索、分类、筛选语言、收藏、深浅色主题、实时调整样张、三字体排版对比。
+- 搜索、分类、筛选语言和资源来源（本站内置／官方获取）、收藏、深浅色主题、实时调整样张、三字体排版对比。
 - 开源字体由网站按需加载 WOFF2 切片或原始 TTF/OTF，不依赖线上 Google Fonts CSS 服务。
 - 字体卡片和详情提供本站原始文件下载；详情另附版权与许可证全文。
 - 用户导入的字体文件只保存在浏览器 IndexedDB，不上传任何服务器。
@@ -55,4 +55,4 @@ Fontfolio 的 34 款开放许可字体在 GitHub Pages 上**自托管预览字�
 
 官方下载文件地址由 `scripts/bundle-fonts.mjs` 在打包字体时统一生成到 `public/fonts/official-sources.json`，与构建时使用的原版字库保持一致，无需重复维护两个独立链接清单。页面获取映射失败时，官方下载按钮自动退回相应字体的官方项目页。
 
-鸿蒙字体 HarmonyOS Sans 和 MiSans 属于独立许可字体，**不开放本站文件下载**。其详情页保留官方字体页面入口及浏览器本地字库导入功能。
+MiSans、MiSans TC、MiSans Latin、MiSans L3、HarmonyOS Sans、HarmonyOS Sans SC 均使用厂商专有许可，**不由 Fontfolio 托管原始字体文件**。卡片和详情提供官方获取入口、当前浏览器可用的本机字体检测，以及本地导入预览。

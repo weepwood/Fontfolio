@@ -13,6 +13,7 @@ const activeFilter = ref<Filter>('全部')
 const currentPage = ref<Page>('gallery')
 const search = ref('')
 const language = ref('全部语言')
+const sourceFilter = ref<'全部资源'|'本站内置'|'官方获取'>('全部资源')
 const fontSize = ref(48)
 const fontWeight = ref(400)
 const spacing = ref(0)
@@ -58,7 +59,8 @@ const filtered = computed(()=>fontList.value.filter(font=>{
   const matchesQuery = !query || [font.id,font.name,font.nativeName,font.mood,font.category,font.languages].join(' ').toLowerCase().includes(query)
   const matchesCategory = activeFilter.value==='全部' || (activeFilter.value==='收藏' ? favorites.value.includes(font.id) : font.category===activeFilter.value)
   const matchesLanguage = language.value==='全部语言' || (language.value==='中文' ? font.languages.includes('中') : language.value==='日文' ? font.languages.includes('日') : font.languages.includes('英'))
-  return matchesQuery && matchesCategory && matchesLanguage
+  const matchesSource = sourceFilter.value==='全部资源' || (sourceFilter.value==='本站内置' ? font.source==='bundled' : font.source==='manual')
+  return matchesQuery && matchesCategory && matchesLanguage && matchesSource
 }))
 const comparison = computed(()=>selection.value.map(id=>fontList.value.find(f=>f.id===id)).filter((f):f is FontRecord=>Boolean(f)))
 const favoriteCount = computed(()=>favorites.value.length)
@@ -117,6 +119,41 @@ async function activateFont(id:string,buffer:ArrayBuffer){
   activeFaces.set(id,face)
   localFamily[id]=family
   localOrigin[id]='imported'
+}
+const systemFontNames:Record<string,string[]>={
+  misans:['MiSans','MiSans VF','MiSans-Regular'],
+  'misans-tc':['MiSans TC','MiSansTC'],
+  'misans-latin':['MiSans Latin','MiSans Latin VF'],
+  'misans-l3':['MiSans L3'],
+  'harmonyos-sans':['HarmonyOS Sans','HarmonyOS_Sans'],
+  'harmonyos-sans-sc':['HarmonyOS Sans SC','HarmonyOS_Sans_SC','HarmonyOS Sans SC Regular']
+}
+/** Probe only these named families, without enumerating the visitor's installed fonts. */
+async function detectInstalledFonts(targetId?:string){
+  if(typeof FontFace==='undefined')return
+  let recognized=0
+  for(const [id,candidates] of Object.entries(systemFontNames)){
+    if(targetId && id!==targetId)continue
+    if(localFamily[id]){recognized++;continue}
+    const family='FontfolioSystem_'+id.replace(/[^a-zA-Z0-9]/g,'_')
+    for(const name of candidates){
+      try{
+        const face=new FontFace(family,'local("'+name+'")')
+        await face.load()
+        document.fonts.add(face)
+        activeFaces.set(id,face)
+        localFamily[id]=family
+        localOrigin[id]='installed'
+        recognized++
+        break
+      }catch{ /* The system font is not available, or local() is restricted. */ }
+    }
+  }
+  if(targetId){
+    notice.value=recognized
+      ? '已识别本机安装的字体，正在使用实际字形预览。'
+      : '未检测到系统字体，或浏览器限制访问。请从官网下载字体后手动导入预览。'
+  }
 }
 async function restoreLocalFonts(){
   try{
@@ -208,7 +245,7 @@ function keydown(event:KeyboardEvent){
 }
 onMounted(()=>{
   dark.value=stored('fontfolio:theme',false)
-  void restoreLocalFonts()
+  void restoreLocalFonts().then(()=>detectInstalledFonts())
   void loadOfficialSources()
   if('IntersectionObserver' in window){
     observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){const font=targets.get(entry.target);if(font)ensureFont(font);observer?.unobserve(entry.target)}},{rootMargin:'240px'})
@@ -262,13 +299,13 @@ watch(detail,(value)=>{document.body.style.overflow=value?'hidden':''})
             <div class="section-heading"><div><span class="eyebrow">01 / THE COLLECTION</span><h2>字体画廊 <span class="counter">{{ filtered.length.toString().padStart(2,'0') }}</span></h2></div><button class="ghost-link" type="button" @click="upload()"><UploadCloud :size="16"/> 导入本地字体 <Plus :size="15"/></button></div>
             <div class="browser-toolbar">
               <label class="search-box"><Search :size="19"/><input ref="searchInput" v-model="search" aria-label="搜索字体" placeholder="搜索字体、风格或关键词..." /><kbd>/</kbd></label>
-              <div class="select-wrap"><select v-model="language" aria-label="选择语言"><option>全部语言</option><option>中文</option><option>英文</option><option>日文</option></select></div>
+              <div class="select-wrap"><select v-model="language" aria-label="选择语言"><option>全部语言</option><option>中文</option><option>英文</option><option>日文</option></select></div><div class="select-wrap source-wrap"><select v-model="sourceFilter" aria-label="选择字体资源类型"><option>全部资源</option><option>本站内置</option><option>官方获取</option></select></div>
               <div class="result-count">{{ filtered.length }} FONTS</div>
             </div>
             <div class="filter-chips"><button v-for="cat in categories" :key="cat" type="button" :class="{active:activeFilter===cat}" @click="changeFilter(cat)">{{cat==='全部'?'全部字体':cat==='收藏'?'♡ 收藏':cat}}</button></div>
             <div v-if="filtered.length" class="font-grid">
               <article v-for="font in filtered" :key="font.id" v-visible="font" class="font-card" tabindex="0" @click="showFont(font)" @keydown.enter="showFont(font)">
-                <div class="font-card-top"><div><span class="card-number">{{ String(fontList.indexOf(font)+1).padStart(2,'0') }}</span><span class="card-tag">{{font.category}}</span></div><div class="card-actions"><a v-if="font.source==='bundled'" class="card-official" :href="upstreamDownloadUrl(font)" target="_blank" rel="noopener noreferrer" :aria-label="'查看 '+font.name+' 官方原始字体下载'" :title="hasDirectUpstream(font)?'从上游官方仓库下载原始字体':'查看官方字体项目及下载页面'" @click.stop><ExternalLink :size="15"/></a><a v-if="font.source==='bundled'" class="card-download" :href="downloadUrl(font)" :download="font.name+'.'+downloadExt(font)" :aria-label="'本站下载 '+font.name" :title="'本站下载 '+downloadExt(font).toUpperCase()+' 字体文件'" @click.stop><Download :size="16"/></a><button type="button" class="favorite-button" :aria-label="favorites.includes(font.id)?'取消收藏':'收藏字体'" @click.stop="toggleFavorite(font.id)"><Heart :size="17" :fill="favorites.includes(font.id)?'currentColor':'none'"/></button></div></div>
+                <div class="font-card-top"><div><span class="card-number">{{ String(fontList.indexOf(font)+1).padStart(2,'0') }}</span><span class="card-tag">{{font.category}}</span></div><div class="card-actions"><a v-if="font.source==='manual' && font.url!=='#'" class="card-official" :href="font.url" target="_blank" rel="noopener noreferrer" :aria-label="'前往 '+font.name+' 厂商官方字体下载页'" title="厂商官方下载页面" @click.stop><ExternalLink :size="16"/></a><button v-if="font.source==='manual' && !available(font)" class="card-download" type="button" :aria-label="'导入 '+font.name+' 字体文件'" title="导入本地字体预览" @click.stop="upload(font.id)"><UploadCloud :size="16"/></button><a v-if="font.source==='bundled'" class="card-official" :href="upstreamDownloadUrl(font)" target="_blank" rel="noopener noreferrer" :aria-label="'查看 '+font.name+' 官方原始字体下载'" :title="hasDirectUpstream(font)?'从上游官方仓库下载原始字体':'查看官方字体项目及下载页面'" @click.stop><ExternalLink :size="15"/></a><a v-if="font.source==='bundled'" class="card-download" :href="downloadUrl(font)" :download="font.name+'.'+downloadExt(font)" :aria-label="'本站下载 '+font.name" :title="'本站下载 '+downloadExt(font).toUpperCase()+' 字体文件'" @click.stop><Download :size="16"/></a><button type="button" class="favorite-button" :aria-label="favorites.includes(font.id)?'取消收藏':'收藏字体'" @click.stop="toggleFavorite(font.id)"><Heart :size="17" :fill="favorites.includes(font.id)?'currentColor':'none'"/></button></div></div>
                 <div class="card-sample-wrap"><AutoFitSample
                   :text="previewText(font)"
                   :font-family="fontFamilyFor(font)"
@@ -276,11 +313,11 @@ watch(detail,(value)=>{document.body.style.overflow=value?'hidden':''})
                   :letter-spacing="spacing"
                   :line-height="leading"
                   :preferred-size="Math.min(fontSize, 48)"
-                /><div v-if="font.source==='manual' && !available(font)" class="needs-font">需从官方获取 · 可自行导入预览</div><div v-else-if="fontStatus[font.id]==='error' && !available(font)" class="needs-font">加载失败 · 当前显示备用字体</div><div v-else-if="font.source==='bundled' && available(font)" class="needs-font font-loaded">✓ 已内置 · 支持下载</div><div v-else-if="font.source==='manual' && localOrigin[font.id]" class="needs-font font-loaded">{{localOrigin[font.id]==='installed'?'✓ 已识别本机字库':'✓ 本地字库已加载'}}</div></div>
+                /><div v-if="font.source==='manual' && !available(font)" class="needs-font">厂商官方下载 · 安装后识别或本地导入</div><div v-else-if="fontStatus[font.id]==='error' && !available(font)" class="needs-font">加载失败 · 当前显示备用字体</div><div v-else-if="font.source==='bundled' && available(font)" class="needs-font font-loaded">✓ 已内置 · 支持下载</div><div v-else-if="font.source==='manual' && localOrigin[font.id]" class="needs-font font-loaded">{{localOrigin[font.id]==='installed'?'✓ 已识别本机字库':'✓ 本地字库已加载'}}</div></div>
                 <div class="font-card-footer"><div><h3>{{font.name}}</h3><p>{{font.nativeName}} · {{font.mood}}</p></div><ArrowUpRight :size="18"/></div>
               </article>
             </div>
-            <div v-else class="empty-state"><span>∅</span><h3>没有找到匹配的字体</h3><p>试试其他关键词或清空筛选条件。</p><button type="button" @click="search='';activeFilter='全部';language='全部语言'">显示全部字体 <ArrowRight :size="15"/></button></div>
+            <div v-else class="empty-state"><span>∅</span><h3>没有找到匹配的字体</h3><p>试试其他关键词或清空筛选条件。</p><button type="button" @click="search='';activeFilter='全部';language='全部语言';sourceFilter='全部资源'">显示全部字体 <ArrowRight :size="15"/></button></div>
           </section>
           <section class="preview-panel">
             <div class="section-heading"><div><span class="eyebrow">02 / MAKE IT YOURS</span><h2>实时文字预览</h2></div><div class="panel-hint"><SlidersHorizontal :size="17"/> INTERACTIVE TYPE TESTER</div></div>
@@ -300,10 +337,10 @@ watch(detail,(value)=>{document.body.style.overflow=value?'hidden':''})
       <section class="font-modal" role="dialog" aria-modal="true" :aria-label="'字体详情 '+detail.name">
         <div class="modal-top"><div><span class="eyebrow">FONT DETAILS / {{detail.category.toUpperCase()}}</span><h2>{{detail.name}}</h2><p>{{detail.nativeName}} · {{detail.mood}}</p></div><button type="button" class="modal-close" aria-label="关闭详情" @click="detail=null"><X :size="20"/></button></div>
         <div v-visible="detail" class="modal-specimen" :style="{...styleFor(detail),fontSize:'clamp(35px, 6vw, 75px)'}">{{previewText(detail)}}</div>
-        <div class="modal-actions"><a v-if="detail.source==='bundled'" class="font-file-download" :href="downloadUrl(detail)" :download="detail.name+'.'+downloadExt(detail)"><Download :size="17"/> 本站下载 {{downloadExt(detail).toUpperCase()}}</a><a v-if="detail.source==='bundled'" class="font-upstream-download" :href="upstreamDownloadUrl(detail)" target="_blank" rel="noopener noreferrer"><ExternalLink :size="16"/> {{hasDirectUpstream(detail)?'官方原始字体下载':'官方字体下载页面'}}</a><a v-if="detail.source==='bundled'" class="font-license-download" :href="licenseUrl(detail)" target="_blank" rel="noopener noreferrer">查看 OFL 授权文件 <ExternalLink :size="15"/></a><button type="button" :class="{marked:favorites.includes(detail.id)}" @click="toggleFavorite(detail.id)"><Heart :size="17" :fill="favorites.includes(detail.id)?'currentColor':'none'"/> {{favorites.includes(detail.id)?'已收藏':'添加收藏'}}</button><button type="button" @click="toggleCompare(detail.id)"><Columns2 :size="17"/> {{selection.includes(detail.id)?'从对比移除':'加入对比'}}</button><button type="button" @click="copyCss(detail)"><Copy :size="17"/> 复制 CSS</button><button v-if="detail.source==='manual'" type="button" @click="upload(detail.id)"><UploadCloud :size="17"/> {{available(detail)?'重新导入字库':'导入字库'}}</button><button v-if="localOrigin[detail.id]==='imported'" type="button" @click="forgetLocalFont(detail.id)"><X :size="16"/> 清除本地字库</button></div>
+        <div class="modal-actions"><a v-if="detail.source==='manual' && detail.url!=='#'" class="font-upstream-download" :href="detail.url" target="_blank" rel="noopener noreferrer"><ExternalLink :size="16"/> 前往官网获取字体</a><button v-if="detail.source==='manual'" type="button" @click="detectInstalledFonts(detail.id)"><Search :size="16"/> 检测本机字体</button><a v-if="detail.source==='bundled'" class="font-file-download" :href="downloadUrl(detail)" :download="detail.name+'.'+downloadExt(detail)"><Download :size="17"/> 本站下载 {{downloadExt(detail).toUpperCase()}}</a><a v-if="detail.source==='bundled'" class="font-upstream-download" :href="upstreamDownloadUrl(detail)" target="_blank" rel="noopener noreferrer"><ExternalLink :size="16"/> {{hasDirectUpstream(detail)?'官方原始字体下载':'官方字体下载页面'}}</a><a v-if="detail.source==='bundled'" class="font-license-download" :href="licenseUrl(detail)" target="_blank" rel="noopener noreferrer">查看 OFL 授权文件 <ExternalLink :size="15"/></a><button type="button" :class="{marked:favorites.includes(detail.id)}" @click="toggleFavorite(detail.id)"><Heart :size="17" :fill="favorites.includes(detail.id)?'currentColor':'none'"/> {{favorites.includes(detail.id)?'已收藏':'添加收藏'}}</button><button type="button" @click="toggleCompare(detail.id)"><Columns2 :size="17"/> {{selection.includes(detail.id)?'从对比移除':'加入对比'}}</button><button type="button" @click="copyCss(detail)"><Copy :size="17"/> 复制 CSS</button><button v-if="detail.source==='manual'" type="button" @click="upload(detail.id)"><UploadCloud :size="17"/> {{available(detail)?'重新导入字库':'导入字库'}}</button><button v-if="localOrigin[detail.id]==='imported'" type="button" @click="forgetLocalFont(detail.id)"><X :size="16"/> 清除本地字库</button></div>
         <div class="modal-info"><div><span class="info-label">TYPE CATEGORY</span><strong>{{detail.category}}</strong></div><div><span class="info-label">LANGUAGE</span><strong>{{detail.languages}}</strong></div><div><span class="info-label">FONT LICENSE</span><strong>{{detail.license}}</strong></div><div><span class="info-label">PREVIEW STATE</span><strong>{{localOrigin[detail.id]==='installed'?'系统已安装字体':localOrigin[detail.id]==='imported'?'本地字体文件已加载':available(detail)?'本站自托管字体已加载':'备用字体 / 需要导入'}}</strong></div></div>
         <p class="modal-description">{{detail.description}} <span v-if="detail.source==='manual'">公开可下载不代表可以任意商用或再分发，请核对权利人的具体许可条款。</span><span v-else-if="detail.source==='bundled'"> 本站提供原版 TTF/OTF 及对应 OFL.txt，请在下载和使用前阅读版权声明。</span></p>
-        <a v-if="detail.url!=='#'" :href="detail.url" target="_blank" rel="noopener noreferrer" class="source-button">{{detail.source==='manual'?'前往官方字体页面 · 了解下载与使用授权':'访问字体官网 / 开源项目'}} <ExternalLink :size="16"/></a>
+        <a v-if="detail.url!=='#'" :href="detail.url" target="_blank" rel="noopener noreferrer" class="source-button">{{detail.source==='manual'?'查看厂商官方字体资料与许可':'访问字体官网 / 开源项目'}} <ExternalLink :size="16"/></a>
       </section>
     </div>
     <input ref="uploadInput" type="file" accept=".ttf,.otf,.woff,.woff2" hidden @change="handleUpload"/>
