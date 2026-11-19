@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { existsSync, mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 
 // [site id, directory under google/fonts/ofl, original TTF, Google Fonts family, supported wght range]
 const FONTS = [
@@ -129,10 +129,70 @@ async function bundleOriginal(font) {
     "') format('"+font.format+"');font-style:normal;font-weight:400;font-display:swap}\n")
   console.log('[font] bundled original '+font.id)
 }
+// Blueaka is not under the SIL OFL. Its embedded name table records copyright
+// held by Beijing Founder Electronics Co., Ltd. Do NOT fetch or publish it by
+// default, even though a copy is publicly accessible in another GitHub repo.
+// The licensed publishing path must be enabled explicitly by the site operator.
+async function bundleAuthorizedBlueaka() {
+  const dir=join(root,'blueaka')
+  const css=join(root,'blueaka.css')
+  const manifest=join(dir,'manifest.json')
+  const authorized=process.env.BLUEAKA_PUBLIC_DISTRIBUTION_AUTHORIZED==='true'
+
+  if (!authorized) {
+    // Critical: remove previously cached private/proprietary assets.
+    rmSync(dir,{recursive:true,force:true})
+    rmSync(css,{force:true})
+    console.log('[font] Blueaka not distributed (no publishing authorization configured)')
+    return
+  }
+
+  const localFile=process.env.BLUEAKA_FONT_FILE
+  const privateUrl=process.env.BLUEAKA_SOURCE_URL
+  if (!localFile && !privateUrl) {
+    throw new Error('Blueaka was authorized for publishing, but neither BLUEAKA_FONT_FILE nor BLUEAKA_SOURCE_URL was supplied')
+  }
+  if (localFile && privateUrl) {
+    throw new Error('Provide only one Blueaka source: local file OR private URL')
+  }
+
+  let bytes
+  if (localFile) {
+    bytes=readFileSync(resolve(localFile))
+  } else {
+    const url=new URL(privateUrl)
+    if (url.protocol!=='https:') throw new Error('BLUEAKA_SOURCE_URL must be HTTPS')
+    const headers={}
+    if (process.env.BLUEAKA_SOURCE_TOKEN) headers.authorization='Bearer '+process.env.BLUEAKA_SOURCE_TOKEN
+    // Never print the private URL or token; do not expose it in build logs.
+    const response=await fetch(url,{headers,redirect:'follow'})
+    if (!response.ok) throw new Error('Authorized Blueaka download failed: HTTP '+response.status)
+    bytes=Buffer.from(await response.arrayBuffer())
+  }
+
+  const ttfMagic=Buffer.from([0,1,0,0])
+  if (bytes.length<10000 || bytes.length>32*1024*1024 || !bytes.subarray(0,4).equals(ttfMagic)) {
+    throw new Error('Invalid Blueaka TTF file; publishing aborted')
+  }
+  const digest=createHash('sha256').update(bytes).digest('hex')
+  const expected=process.env.BLUEAKA_EXPECTED_SHA256 || 'f9ad7dd666ea5f0fdc4c0924ea561e1271922e3c3ebe30dc254932db1de85623'
+  if (!/^[0-9a-f]{64}$/i.test(expected) || digest.toLowerCase()!==expected.toLowerCase()) {
+    throw new Error('Blueaka SHA-256 mismatch; publishing aborted')
+  }
+
+  mkdirSync(dir,{recursive:true})
+  writeFileSync(join(dir,'download.ttf'),bytes)
+  writeFileSync(css,
+    "/* BlueakaBetaGBK DemiBold; proprietary font; distribution permission required. */\n"+
+    "@font-face{font-family:'Blueaka';src:url('./blueaka/download.ttf') format('truetype');font-style:normal;font-weight:600;font-display:swap}\n")
+  writeFileSync(manifest,JSON.stringify({embedded:true,downloadable:true,family:'Blueaka',proprietary:true,sha256:digest},null,2)+'\n')
+  console.log('[font] Blueaka published from an explicitly authorized source ('+bytes.length+' bytes)')
+}
 async function main() {
   mkdirSync(root,{recursive:true})
   await pool(FONTS,bundle,2)
   await pool(OTHER_OFL,bundleOriginal,2)
-  console.log('[font] '+(FONTS.length+OTHER_OFL.length)+' families ready')
+  await bundleAuthorizedBlueaka()
+  console.log('[font] '+(FONTS.length+OTHER_OFL.length)+' OFL families ready')
 }
 main().catch(error=>{console.error(error);process.exitCode=1})

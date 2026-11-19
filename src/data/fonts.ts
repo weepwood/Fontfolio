@@ -10,7 +10,7 @@ const rows = [
     "中英",
     "游戏 · 柔和",
     "manual",
-    "待核实",
+    "方正电子版权所有 · 授权待核实",
     "https://github.com/Kiramei/baas-tauri/blob/main/scripts/fonts-src/Blueaka.ttf"
   ],
   [

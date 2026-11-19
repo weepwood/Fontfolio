@@ -50,9 +50,24 @@ function previewText(font:FontRecord) { return sample.value===originalSample && 
 function available(font:FontRecord) { return Boolean(localFamily[font.id]) || (font.source==='bundled' && fontStatus[font.id]==='ready') }
 function downloadExt(font:FontRecord){return font.id==='gensen'?'otf':'ttf'}
 function downloadUrl(font:FontRecord){return import.meta.env.BASE_URL+'fonts/'+font.id+'/download.'+downloadExt(font)}
-function licenseUrl(font:FontRecord){return import.meta.env.BASE_URL+'fonts/'+font.id+'/OFL.txt'}
+function licenseUrl(font:FontRecord){return font.id==='blueaka'?'https://www.foundertype.com/index.php/About/powerAllowPro':import.meta.env.BASE_URL+'fonts/'+font.id+'/OFL.txt'}
 function styleFor(font:FontRecord) {
   return {fontFamily:available(font) ? '"' + (localFamily[font.id] || font.family) + '", sans-serif' : 'inherit',fontSize:fontSize.value+'px',fontWeight:fontWeight.value,letterSpacing:spacing.value+'px',lineHeight:leading.value}
+}
+async function inspectPublishedBlueaka() {
+  // Not found on public Pages unless the owner explicitly provided licensed assets.
+  try {
+    const response=await fetch(import.meta.env.BASE_URL+'fonts/blueaka/manifest.json',{cache:'no-store'})
+    if (!response.ok)return
+    const manifest:unknown=await response.json()
+    if (!manifest || typeof manifest!=='object' || !('embedded' in manifest) || manifest.embedded!==true)return
+    const font=fontList.value.find(f=>f.id==='blueaka')
+    if (!font)return
+    font.source='bundled'
+    font.license='专有许可（须取得网站嵌入及再分发授权）'
+    font.description='网站管理员已选择提供此字库；字体版权属于原权利人，不受本站开源代码许可覆盖。请自行核对授权范围。'
+    ensureFont(font)
+  } catch { /* No manifest or network unavailable: keep local-only preview. */ }
 }
 function ensureFont(font:FontRecord) {
   if (font.source!=='bundled' || fontStatus[font.id]) return
@@ -193,6 +208,7 @@ function keydown(event:KeyboardEvent){
 onMounted(()=>{
   dark.value=stored('fontfolio:theme',false)
   void restoreLocalFonts()
+  void inspectPublishedBlueaka()
   if('IntersectionObserver' in window){
     observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){const font=targets.get(entry.target);if(font)ensureFont(font);observer?.unobserve(entry.target)}},{rootMargin:'240px'})
     for(const el of targets.keys())observer.observe(el)
@@ -277,9 +293,9 @@ watch(detail,(value)=>{document.body.style.overflow=value?'hidden':''})
         <div class="modal-top"><div><span class="eyebrow">FONT DETAILS / {{detail.category.toUpperCase()}}</span><h2>{{detail.name}}</h2><p>{{detail.nativeName}} · {{detail.mood}}</p></div><button type="button" class="modal-close" aria-label="关闭详情" @click="detail=null"><X :size="20"/></button></div>
         <p v-if="detail.id==='blueaka' && !available(detail)" class="blueaka-help">Blueaka 没有随网站公开分发。安装字体后重新打开页面，或点击下方「导入字库」，选择合法取得的 <strong>Blueaka.ttf</strong>。导入后将保存在当前浏览器中。</p>
         <div v-visible="detail" class="modal-specimen" :style="{...styleFor(detail),fontSize:'clamp(35px, 6vw, 75px)'}">{{previewText(detail)}}</div>
-        <div class="modal-actions"><a v-if="detail.source==='bundled'" class="font-file-download" :href="downloadUrl(detail)" :download="detail.name+'.'+downloadExt(detail)"><Download :size="17"/> 下载字体 {{downloadExt(detail).toUpperCase()}}</a><a v-if="detail.source==='bundled'" class="font-license-download" :href="licenseUrl(detail)" target="_blank" rel="noopener noreferrer">查看授权文件 <ExternalLink :size="15"/></a><button type="button" :class="{marked:favorites.includes(detail.id)}" @click="toggleFavorite(detail.id)"><Heart :size="17" :fill="favorites.includes(detail.id)?'currentColor':'none'"/> {{favorites.includes(detail.id)?'已收藏':'添加收藏'}}</button><button type="button" @click="toggleCompare(detail.id)"><Columns2 :size="17"/> {{selection.includes(detail.id)?'从对比移除':'加入对比'}}</button><button type="button" @click="copyCss(detail)"><Copy :size="17"/> 复制 CSS</button><button v-if="detail.source==='manual'" type="button" @click="upload(detail.id)"><UploadCloud :size="17"/> {{available(detail)?'重新导入字库':'导入字库'}}</button><button v-if="localOrigin[detail.id]==='imported'" type="button" @click="forgetLocalFont(detail.id)"><X :size="16"/> 清除本地字库</button></div>
+        <div class="modal-actions"><a v-if="detail.source==='bundled'" class="font-file-download" :href="downloadUrl(detail)" :download="detail.name+'.'+downloadExt(detail)"><Download :size="17"/> 下载字体 {{downloadExt(detail).toUpperCase()}}</a><a v-if="detail.source==='bundled'" class="font-license-download" :href="licenseUrl(detail)" target="_blank" rel="noopener noreferrer">{{detail.id==='blueaka'?'查看方正授权条件':'查看 OFL 授权文件'}} <ExternalLink :size="15"/></a><button type="button" :class="{marked:favorites.includes(detail.id)}" @click="toggleFavorite(detail.id)"><Heart :size="17" :fill="favorites.includes(detail.id)?'currentColor':'none'"/> {{favorites.includes(detail.id)?'已收藏':'添加收藏'}}</button><button type="button" @click="toggleCompare(detail.id)"><Columns2 :size="17"/> {{selection.includes(detail.id)?'从对比移除':'加入对比'}}</button><button type="button" @click="copyCss(detail)"><Copy :size="17"/> 复制 CSS</button><button v-if="detail.source==='manual'" type="button" @click="upload(detail.id)"><UploadCloud :size="17"/> {{available(detail)?'重新导入字库':'导入字库'}}</button><button v-if="localOrigin[detail.id]==='imported'" type="button" @click="forgetLocalFont(detail.id)"><X :size="16"/> 清除本地字库</button></div>
         <div class="modal-info"><div><span class="info-label">TYPE CATEGORY</span><strong>{{detail.category}}</strong></div><div><span class="info-label">LANGUAGE</span><strong>{{detail.languages}}</strong></div><div><span class="info-label">FONT LICENSE</span><strong>{{detail.license}}</strong></div><div><span class="info-label">PREVIEW STATE</span><strong>{{localOrigin[detail.id]==='installed'?'系统已安装字体':localOrigin[detail.id]==='imported'?'本地字体文件已加载':available(detail)?'本站自托管字体已加载':'备用字体 / 需要导入'}}</strong></div></div>
-        <p class="modal-description">{{detail.description}} <span v-if="detail.source==='manual'">公开可下载不代表可以任意商用或再分发，请核对权利人的具体许可条款。</span><span v-else-if="detail.source==='bundled'"> 本站提供原版 TTF/OTF 及对应 OFL.txt，请在下载和使用前阅读版权声明。</span></p>
+        <p class="modal-description">{{detail.description}} <span v-if="detail.source==='manual'">公开可下载不代表可以任意商用或再分发，请核对权利人的具体许可条款。</span><span v-else-if="detail.id==='blueaka'"> Blueaka 的字体元数据标明北京北大方正电子有限公司版权；提供字库文件不代表可以自行再分发，请核查网站运营方的具体授权。</span><span v-else-if="detail.source==='bundled'"> 本站提供原版 TTF/OTF 及对应 OFL.txt，请在下载和使用前阅读版权声明。</span></p>
         <a v-if="detail.url!=='#'" :href="detail.url" target="_blank" rel="noopener noreferrer" class="source-button">查看字体来源和授权 <ExternalLink :size="16"/></a>
       </section>
     </div>

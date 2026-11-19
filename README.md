@@ -59,3 +59,16 @@ Blueaka 来源：https://github.com/Kiramei/baas-tauri/blob/main/scripts/fonts-s
 ## 许可证
 
 代码许可证参见根目录 LICENSE。22 款内置字体的版权归各自字体作者或权利人所有，请通过字体详情页查看对应的 OFL.txt。更多说明见 [字体许可与来源](docs/FONT-LICENSES.md)。
+
+
+## 授权启用 Blueaka 的自动打包
+
+上传的 Blueaka.ttf 内嵌版权为北京北大方正电子有限公司，**并非开源字体**。项目已提供可选的授权发布构建流程，但在未获得明确覆盖网站嵌入、公开下载/再分发权利的许可前，默认不会把该文件公开部署。用户自己导入字体到浏览器的功能继续可用。
+
+获得相应许可后，可以在本地使用：
+
+```bash
+BLUEAKA_PUBLIC_DISTRIBUTION_AUTHORIZED=true BLUEAKA_FONT_FILE=/path/to/Blueaka.ttf npm run fonts:sync
+```
+
+GitHub Pages 可设置 `BLUEAKA_PUBLIC_DISTRIBUTION_AUTHORIZED` 为 repository Actions variable，`BLUEAKA_SOURCE_URL` 为 Actions secret（授权字库 HTTPS 私有文件链接），可选 `BLUEAKA_SOURCE_TOKEN` 与 `BLUEAKA_EXPECTED_SHA256`。请勿在公开 Git 仓库中提交字体本体或明文私有文件链接。未授权状态下构建脚本会移除缓存中可能残留的 Blueaka 文件。详细流程见 [字体版权与部署说明](docs/FONT-LICENSES.md)。
