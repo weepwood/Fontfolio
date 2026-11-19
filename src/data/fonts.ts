@@ -3,17 +3,6 @@ export type Source = 'bundled' | 'manual' | 'uploaded'
 export type FontRecord = { id:string; name:string; nativeName:string; category:FontCategory; languages:string; mood:string; source:Source; license:string; url:string; family:string; description:string }
 const rows = [
   [
-    "blueaka",
-    "Blueaka",
-    "蔚蓝档案风格字体",
-    "圆体",
-    "中英",
-    "游戏 · 柔和",
-    "manual",
-    "方正电子版权所有 · 授权待核实",
-    "https://github.com/Kiramei/baas-tauri/blob/main/scripts/fonts-src/Blueaka.ttf"
-  ],
-  [
     "lxgw975",
     "LXGW 975 Yuan",
     "霞鹜 975 圆体",
@@ -45,6 +34,17 @@ const rows = [
     "manual",
     "专有许可",
     "https://hyperos.mi.com/font/zh/"
+  ],
+  [
+    "harmonyos-sans",
+    "HarmonyOS Sans",
+    "鸿蒙字体",
+    "无衬线",
+    "中英",
+    "系统 · 清晰",
+    "manual",
+    "华为专有许可 · 不得独立再分发",
+    "https://developer.huawei.com/consumer/cn/doc/design-guides/font-0000001828772001/"
   ],
   [
     "noto-sans-sc",
@@ -241,7 +241,67 @@ const rows = [
     "bungee","Bungee","Bungee","展示","英文",
     "醒目 · 标题","bundled","SIL OFL 1.1",
     "https://fonts.google.com/specimen/Bungee"
+  ],
+  [
+    "noto-sans-tc","Noto Sans TC","思源黑体（繁体）","无衬线","中英",
+    "现代 · 繁体","bundled","SIL OFL 1.1",
+    "https://fonts.google.com/noto/specimen/Noto+Sans+TC"
+  ],
+  [
+    "noto-sans-jp","Noto Sans JP","思源黑体（日文）","无衬线","日英",
+    "屏显 · 日文","bundled","SIL OFL 1.1",
+    "https://fonts.google.com/noto/specimen/Noto+Sans+JP"
+  ],
+  [
+    "noto-sans-kr","Noto Sans KR","思源黑体（韩文）","无衬线","韩英",
+    "屏显 · 韩文","bundled","SIL OFL 1.1",
+    "https://fonts.google.com/noto/specimen/Noto+Sans+KR"
+  ],
+  [
+    "zen-maru","Zen Maru Gothic","Zen Maru 圆体","圆体","日英",
+    "可爱 · 治愈","bundled","SIL OFL 1.1",
+    "https://fonts.google.com/specimen/Zen+Maru+Gothic"
+  ],
+  [
+    "zen-kaku","Zen Kaku Gothic New","Zen Kaku 新黑体","无衬线","日英",
+    "均衡 · 现代","bundled","SIL OFL 1.1",
+    "https://fonts.google.com/specimen/Zen+Kaku+Gothic+New"
+  ],
+  [
+    "kaisei-decol","Kaisei Decol","Kaisei 装饰明朝体","衬线","日英",
+    "文艺 · 典雅","bundled","SIL OFL 1.1",
+    "https://fonts.google.com/specimen/Kaisei+Decol"
+  ],
+  [
+    "ibm-plex-jp","IBM Plex Sans JP","IBM Plex 日文字体","无衬线","日英",
+    "科技 · 理性","bundled","SIL OFL 1.1",
+    "https://fonts.google.com/specimen/IBM+Plex+Sans+JP"
+  ],
+  [
+    "jetbrains-mono","JetBrains Mono","JetBrains Mono","等宽","英文",
+    "编程 · 易读","bundled","SIL OFL 1.1",
+    "https://fonts.google.com/specimen/JetBrains+Mono"
+  ],
+  [
+    "unbounded","Unbounded","Unbounded","展示","英文",
+    "未来 · 大胆","bundled","SIL OFL 1.1",
+    "https://fonts.google.com/specimen/Unbounded"
+  ],
+  [
+    "instrument-serif","Instrument Serif","Instrument Serif","衬线","英文",
+    "编辑 · 优雅","bundled","SIL OFL 1.1",
+    "https://fonts.google.com/specimen/Instrument+Serif"
+  ],
+  [
+    "lxgw-wenkai","LXGW WenKai","霞鹜文楷","衬线","中英",
+    "人文 · 阅读","bundled","SIL OFL 1.1",
+    "https://github.com/lxgw/LxgwWenKai"
+  ],
+  [
+    "genyo-gothic","GenYo Gothic","源样黑体（TC 繁中版）","无衬线","中日",
+    "稳重 · 书卷","bundled","SIL OFL 1.1",
+    "https://github.com/ButTaiwan/genyog-font"
   ]
 ] as string[][]
-export const fonts: FontRecord[] = rows.map(row => { const [id,name,nativeName,category,languages,mood,source,license,url] = row; return { id,name,nativeName,category:category as FontCategory,languages,mood,source:source as Source,license,url,family:name,description:source === 'manual' ? '当前仅展示资料，可本地导入合法取得的字库，具体授权以字体官方说明为准。' : '本站自托管开源字体，可下载原版字库及其 OFL 许可证。' } })
+export const fonts: FontRecord[] = rows.map(row => { const [id,name,nativeName,category,languages,mood,source,license,url] = row; return { id,name,nativeName,category:category as FontCategory,languages,mood,source:source as Source,license,url,family:name,description:source === 'manual' ? '非开源再分发字体。本站仅保留官方来源、授权信息和用户本地导入预览，不托管字体副本。' : '本站自托管开源字体，可下载原版字库及其 OFL 许可证。' } })
 export const categories = ['全部','圆体','无衬线','衬线','展示','手写','等宽','收藏'] as const

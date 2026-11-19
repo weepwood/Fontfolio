@@ -1,22 +1,26 @@
-# Fontfolio — 字体画廊、排版实验室与开源字体下载
+# Fontfolio — 开源字体画廊与下载实验室
 
-基于 Vue 3 + TypeScript + Vite + SCSS 的字体收藏网页，使用 GitHub Pages 静态部署。
-
-## 已实现
-
-- **24 款字体资料**：其中 **22 款 SIL OFL 开源字体内置到发布网站**，页面不依赖 Google Fonts 实时 CSS 服务。
-- **字体直接下载**：字体卡片和详情提供完整 TTF 下载，详情页面提供对应 OFL.txt 授权文件。
-- **按需真实预览**：采用 Google Fonts 官方提供的 WOFF2 Unicode 切片，支持中文和西文字体的按需字形加载。
-- **字体画廊**：搜索、分类、语言筛选、浏览器收藏、实时样张、深浅主题。
-- **排版实验室**：最多比较三款字体，控制字号、字重、间距、行高等参数。
-- **本地字体**：TTF / OTF / WOFF / WOFF2 可导入浏览器 IndexedDB；文件不上传服务器。
-- **授权策略**：Blueaka / MiSans 暂不随网站再分发，保留资料、来源链接及本地导入；LXGW 975 Yuan 与 GenSen Rounded 已使用原作者版本内置。
+基于 Vue 3、TypeScript、Vite 和 SCSS 的静态字体收藏网站，部署在 GitHub Pages。
 
 在线地址：https://weepwood.github.io/Fontfolio/
 
+## 字体目录
+
+- **36 款字体资料**，其中 **34 款 SIL OFL 1.1 开源字体**由本站托管，提供真实预览、完整 TTF/OTF 字库下载和相应许可证。
+- 新增 12 款：思源黑体繁体/日文/韩文、Zen Maru Gothic、Zen Kaku Gothic New、Kaisei Decol、IBM Plex Sans JP、JetBrains Mono、Unbounded、Instrument Serif、霞鹜文楷、源样黑体。
+- 已有思源黑体简体（Noto Sans SC）、思源宋体、站酷系列、霞鹜 975 圆体、源泉圆体、Inter 等保留。
+- **HarmonyOS Sans / 鸿蒙字体和 MiSans / 小米字体**：不是 SIL OFL，许可不支持本站单独分发字体文件；展示官方介绍链接，并支持用户导入自己合法取得的字库进行本地预览。
+
+## 功能
+
+- 搜索、分类、筛选语言、收藏、深浅色主题、实时调整样张、三字体排版对比。
+- 开源字体由网站按需加载 WOFF2 切片或原始 TTF/OTF，不依赖线上 Google Fonts CSS 服务。
+- 字体卡片和详情提供本站原始文件下载；详情另附版权与许可证全文。
+- 用户导入的字体文件只保存在浏览器 IndexedDB，不上传任何服务器。
+
 ## 本地开发
 
-需要 Node.js 22+，首次运行需要访问 Google Fonts 资源服务器和 google/fonts GitHub 上游仓库。
+Node.js 22+，首次同步字体需要能够访问 Google Fonts 和对应的 GitHub 官方开源仓库：
 
 ```bash
 npm install
@@ -26,49 +30,15 @@ npm run build
 npm run preview
 ```
 
-构建脚本会从 Google Fonts、霞鹜 975 圆体与源泉圆体官方仓库获取字体文件。`npm run build` 会自动同步，字体已缓存时直接复用；获取失败时停止构建，防止发布缺少资源的网站。
+构建时下载的字库写入 `public/fonts/`，该目录被 .gitignore 排除，不提交至 Git。GitHub Actions 会缓存这些资源并最终打包进 Pages 发布产物。如果字体源下载失败，部署构建中止。
 
-## 字体资源目录
+## 内置字体和许可证
 
-```text
-scripts/bundle-fonts.mjs          # 受控的 22 款 OFL 字体来源与构建脚本
-src/data/fonts.ts                 # 包含授权、语言、风格在内的字体资料
-public/fonts/<id>.css             # 自托管 @font-face 样式表
-public/fonts/<id>/*.woff2         # 自托管 WOFF2 字形切片
-public/fonts/<id>/download.ttf    # 可下载安装的完整原始字体（源泉圆体为 download.otf）
-public/fonts/<id>/OFL.txt         # 对应的版权声明和许可证全文
-docs/FONT-LICENSES.md             # 授权说明
-.github/workflows/deploy.yml      # GitHub Pages 自动部署
-```
+- `scripts/bundle-fonts.mjs`：开源字体白名单、官方文件源地址与自动打包流程。
+- `src/data/fonts.ts`：分类、文字信息、语言、版权状态和下载来源。
+- `public/fonts/<id>.css` 与 `public/fonts/<id>/*.woff2`：站内预览。
+- `public/fonts/<id>/download.ttf`（部分为 OTF）：原始字库下载。
+- `public/fonts/<id>/OFL.txt`：对应字体许可原文。
+- `docs/FONT-LICENSES.md`：授权边界与来源说明。
 
-`public/fonts/` 是构建产物，被 `.gitignore` 排除，不会将大型字体二进制加入 Git 提交历史；GitHub Actions 在每次构建时生成它并利用缓存，加快后续部署。**最终发布的 GitHub Pages 网站会托管这些字体文件。**
-
-## 新增字体
-
-1. 先确认字体许可证及其是否允许网页嵌入、下载与再分发。
-2. 在 `src/data/fonts.ts` 中添加字体资料。使用 `source: 'bundled'` 代表可直接下载。
-3. 在 `scripts/bundle-fonts.mjs` 添加字体 ID、Google Fonts 仓库 OFL 子目录、TTF 原文件名及 CSS 字族。
-4. 执行 `npm run fonts:sync && npm run build`，检查字体卡片、样张和 `OFL.txt`。
-
-## Blueaka 和 MiSans
-
-Blueaka 来源：https://github.com/Kiramei/baas-tauri/blob/main/scripts/fonts-src/Blueaka.ttf 。公开仓库存在字体文件不等于取得再分发授权，因而当前版本**不内置**该字体。用户可通过本地导入功能预览已合法取得的字库；MiSans 亦未提供本站再分发版本。
-
-霞鹜 975 圆体与源泉圆体均根据作者的 SIL OFL 1.1 许可分发，使用**未修改的原版**文件；源泉圆体选择了 TC 繁体字形版本。二者由于完整字库体积较大，首次显示时需要下载更多数据。
-
-## 许可证
-
-代码许可证参见根目录 LICENSE。22 款内置字体的版权归各自字体作者或权利人所有，请通过字体详情页查看对应的 OFL.txt。更多说明见 [字体许可与来源](docs/FONT-LICENSES.md)。
-
-
-## 授权启用 Blueaka 的自动打包
-
-上传的 Blueaka.ttf 内嵌版权为北京北大方正电子有限公司，**并非开源字体**。项目已提供可选的授权发布构建流程，但在未获得明确覆盖网站嵌入、公开下载/再分发权利的许可前，默认不会把该文件公开部署。用户自己导入字体到浏览器的功能继续可用。
-
-获得相应许可后，可以在本地使用：
-
-```bash
-BLUEAKA_PUBLIC_DISTRIBUTION_AUTHORIZED=true BLUEAKA_FONT_FILE=/path/to/Blueaka.ttf npm run fonts:sync
-```
-
-GitHub Pages 可设置 `BLUEAKA_PUBLIC_DISTRIBUTION_AUTHORIZED` 为 repository Actions variable，`BLUEAKA_SOURCE_URL` 为 Actions secret（授权字库 HTTPS 私有文件链接），可选 `BLUEAKA_SOURCE_TOKEN` 与 `BLUEAKA_EXPECTED_SHA256`。请勿在公开 Git 仓库中提交字体本体或明文私有文件链接。未授权状态下构建脚本会移除缓存中可能残留的 Blueaka 文件。详细流程见 [字体版权与部署说明](docs/FONT-LICENSES.md)。
+增加字体前，必须先确认**允许第三方托管和提供原始字库下载**，不能仅以“免费商用”判断。代码的 LICENSE 不适用于第三方字体本身。

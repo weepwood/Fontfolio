@@ -32,12 +32,6 @@ jobs:
       - name: Build site
         env:
           GITHUB_PAGES_BASE: /Fontfolio/
-          # Optional, explicit license-gated proprietary font publishing.
-          # Keep both unset unless you hold web embedding + download rights.
-          BLUEAKA_PUBLIC_DISTRIBUTION_AUTHORIZED: ${{ vars.BLUEAKA_PUBLIC_DISTRIBUTION_AUTHORIZED }}
-          BLUEAKA_SOURCE_URL: ${{ secrets.BLUEAKA_SOURCE_URL }}
-          BLUEAKA_SOURCE_TOKEN: ${{ secrets.BLUEAKA_SOURCE_TOKEN }}
-          BLUEAKA_EXPECTED_SHA256: ${{ vars.BLUEAKA_EXPECTED_SHA256 }}
         run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:
