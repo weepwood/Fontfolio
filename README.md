@@ -1,85 +1,59 @@
-# Fontfolio 字形档案
+# Fontfolio — 字体画廊、排版实验室与开源字体下载
 
-一个用于收藏、展示、比对字体的静态网页项目。基于 Vue 3 + TypeScript + Vite + SCSS，支持 GitHub Pages 部署，不需要数据库或后端。
+基于 Vue 3 + TypeScript + Vite + SCSS 的字体收藏网页，使用 GitHub Pages 静态部署。
 
-## 首版功能
+## 已实现
 
-- 20 款种子字体档案；分类、语言筛选、搜索与本地收藏
-- 交互式预览：自定义文本、字号与字重
-- 最多三款字体的排版实验室：字号、字重、字间距、行高
-- 字体详情：风格、字形、语言、授权说明及官方来源
-- 浏览器本地导入 `.ttf`、`.otf`、`.woff`、`.woff2` 字体；文件存入当前浏览器 IndexedDB，刷新后仍可预览，不会上传到服务器
-- 深浅色主题、移动端适配、键盘 `/` 聚焦搜索
-- GitHub Actions 构建并发布到 GitHub Pages
+- **24 款字体资料**：其中 **20 款 SIL OFL 开源字体内置到发布网站**，页面不依赖 Google Fonts 实时 CSS 服务。
+- **字体直接下载**：字体卡片和详情提供完整 TTF 下载，详情页面提供对应 OFL.txt 授权文件。
+- **按需真实预览**：采用 Google Fonts 官方提供的 WOFF2 Unicode 切片，支持中文和西文字体的按需字形加载。
+- **字体画廊**：搜索、分类、语言筛选、浏览器收藏、实时样张、深浅主题。
+- **排版实验室**：最多比较三款字体，控制字号、字重、间距、行高等参数。
+- **本地字体**：TTF / OTF / WOFF / WOFF2 可导入浏览器 IndexedDB；文件不上传服务器。
+- **授权策略**：Blueaka / MiSans / LXGW 975 Yuan / GenSen Rounded 暂不随网站再分发，保留资料、来源链接及本地导入。
 
-> **授权说明**：仓库不包含 Blueaka、MiSans 等第三方字体文件。Blueaka 的独立授权尚未核实，MiSans 的许可对字体文件再分发有限制。请在使用、下载、内嵌、改作或再分发字体前阅读字体权利人的最新许可。Google Fonts 字体通过网页按需加载；当前页面上的字体授权标签是便于检索的元数据，不构成法律承诺。
-
-## Blueaka 显示说明
-
-Blueaka 属于仅展示元数据的字体，不随网站发布字体文件。未经授权不能仅凭其他仓库公开提供 TTF 就将其打包再分发。
-
-1. 在字体画廊找到 Blueaka。如果当前计算机已安装名为 `Blueaka` 的字体，网页将尝试通过浏览器的 `local()` 使用系统安装的字库。
-2. 否则点击 Blueaka 卡片中的 **导入 Blueaka.ttf**，选择你合法取得的字库文件；也可以在详情窗口导入。
-3. 成功后卡片会标记“本地字库已加载”，此时预览使用真实字体字形。文件会存储于**当前浏览器**的 IndexedDB；可以在详情窗口清除。
-4. 若浏览器隐私模式阻止 IndexedDB，字体仍在当前会话有效，但刷新后需重新导入。不同浏览器或设备间不会自动同步。
-
-> 字体文件不会上传到 Fontfolio 项目后端；GitHub Pages 仅托管静态网页。选择字库时请确认字体身份与使用授权。
+在线地址：https://weepwood.github.io/Fontfolio/
 
 ## 本地开发
 
-Node.js 22+，npm：
+需要 Node.js 22+，首次运行需要访问 Google Fonts 资源服务器和 google/fonts GitHub 上游仓库。
 
 ```bash
 npm install
+npm run fonts:sync
 npm run dev
 npm run build
 npm run preview
 ```
 
-启动后访问 Vite 输出的本地网址（通常为 http://localhost:5173）。在国内网络环境如果 Google Fonts 不可访问，会显示加载失败或备用字形；应用本身仍可使用搜索、收藏、元数据和本地字体导入。
+构建脚本会从官方源获取字体文件。`npm run build` 会自动同步，字体已缓存时直接复用；获取失败时停止构建，防止发布缺少资源的网站。
 
-## GitHub Pages 发布
+## 字体资源目录
 
-1. 创建公开 GitHub 仓库，例如 `weepwood/Fontfolio`（仅供命名参考，仓库需自己创建）。
-2. 将本项目所有文件提交至 `main` 分支。第一次在本地运行 `npm install` 后，建议把生成的 `package-lock.json` 一并提交，之后可将 CI 的 `npm install` 改为更严格的 `npm ci`。
-3. 仓库 `Settings → Pages → Build and deployment → Source` 选择 `GitHub Actions`。
-4. 推送至 `main` 后，`.github/workflows/deploy.yml` 将安装依赖、构建并发布到 Pages。
-5. 若仓库名称为 `Fontfolio`，项目默认访问地址会是 `https://weepwood.github.io/Fontfolio/`。实际地址以 GitHub Actions 部署结果为准。
-
-工作流会自动处理常见的仓库子路径 (`/Fontfolio/`)；如使用自定义域名，请根据自定义域名场景把 Vite `base` 设为 `/` 并按 GitHub Pages 文档配置域名。
-
-## 添加新字体
-
-编辑 `src/data/fonts.ts`，添加一个 `FontEntry`：
-
-```ts
-{
-  id: 'new-font', name: 'New Font', nativeName: '字体中文名',
-  family: 'New Font', category: '圆体', language: ['中文','英文'],
-  mood: '柔和 · 友善', description: '简短介绍',
-  source: 'manual', license: '授权待核实',
-  licenseNote: '阅读权利人的最新条款。',
-  homepage: 'https://example.org', initial: 'Aa',
-}
+```text
+scripts/bundle-fonts.mjs          # 受控的 20 款 OFL 字体来源与构建脚本
+src/data/fonts.ts                 # 包含授权、语言、风格在内的字体资料
+public/fonts/<id>.css             # 自托管 @font-face 样式表
+public/fonts/<id>/*.woff2         # 自托管 WOFF2 字形切片
+public/fonts/<id>/download.ttf    # 可下载安装的完整原始字体
+public/fonts/<id>/OFL.txt         # 对应的版权声明和许可证全文
+docs/FONT-LICENSES.md             # 授权说明
+.github/workflows/deploy.yml      # GitHub Pages 自动部署
 ```
 
-`source: 'manual'` 表示仅展示元数据，用户可在浏览器手动导入已合法取得的字体文件进行预览；`source: 'google'` 表示字体名称来自 Google Fonts API 且能够通过官方 CSS API 请求加载；`source: 'uploaded'` 由本地导入生成，仅保存在本次页面内存中。
+`public/fonts/` 是构建产物，被 `.gitignore` 排除，不会将大型字体二进制加入 Git 提交历史；GitHub Actions 在每次构建时生成它并利用缓存，加快后续部署。**最终发布的 GitHub Pages 网站会托管这些字体文件。**
 
-请**不要**为了让字体自动显示而直接提交来源和授权不明确的 TTF/OTF 文件。
+## 新增字体
 
-## 下一步
+1. 先确认字体许可证及其是否允许网页嵌入、下载与再分发。
+2. 在 `src/data/fonts.ts` 中添加字体资料。使用 `source: 'bundled'` 代表可直接下载。
+3. 在 `scripts/bundle-fonts.mjs` 添加字体 ID、Google Fonts 仓库 OFL 子目录、TTF 原文件名及 CSS 字族。
+4. 执行 `npm run fonts:sync && npm run build`，检查字体卡片、样张和 `OFL.txt`。
 
-- 字体语言和字符覆盖率探测（fontTools 离线生成静态清单）
-- 字体元数据 schema 校验、数据源自动同步与变更历史
-- 更完整的排版对比：字体轴、OpenType features、更多语言样张
-- 导出收藏清单 JSON、分享只含配置参数的静态链接
-- 全量性能策略：字体按需加载、字库子集与网络失败降级
+## Blueaka 和其他非内置字体
 
-## 第三方与参考
+Blueaka 来源：https://github.com/Kiramei/baas-tauri/blob/main/scripts/fonts-src/Blueaka.ttf 。公开仓库存在字体文件不等于取得其再分发授权，因而当前版本**不内置**该字体。用户可以通过网页的本地导入功能预览已合法取得的文件。MiSans 等许可尚待单独确认的字体采用相同方式。
 
-- https://github.com/Kiramei/baas-tauri — Blueaka 字体参考来源（**不随本项目再分发**）
-- https://github.com/lxgw/975Yuan — 霞鹜 975 圆体
-- https://github.com/ButTaiwan/gensen-font — 源泉圆体
-- https://hyperos.mi.com/font/zh/ — MiSans 官方信息
-- https://fonts.google.com/ — Google Fonts（字体许可各自核对）
-- https://vite.dev/guide/static-deploy.html — GitHub Pages 官方部署方案
+## 许可证
+
+代码许可证参见根目录 LICENSE。20 款内置字体的版权归各自字体作者或权利人所有，请通过字体详情页查看对应的 OFL.txt。更多说明见 [字体许可与来源](docs/FONT-LICENSES.md)。
