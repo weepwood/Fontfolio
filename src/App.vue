@@ -109,7 +109,7 @@ async function activateFont(id:string,buffer:ArrayBuffer){
 async function detectInstalledBlueaka(){
   if(localFamily.blueaka || typeof FontFace==='undefined')return
   // CSS local() uses locally installed fonts without downloading or uploading files.
-  for(const name of ['Blueaka','Blueaka Regular']){
+  for(const name of ['BlueakaBetaGBK DemiBold','BlueakaBetaGBK','BlueakaBeta-DB-GBK','Blueaka','Blueaka Regular']){
     const face=new FontFace('FontfolioInstalledBlueaka','local("'+name+'")')
     try{
       await face.load()
