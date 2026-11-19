@@ -96,9 +96,43 @@ async function bundle([id,slug,file,family,weight]) {
   writeFileSync(cssPath,'/* '+family+' — original OFL.txt: ./'+id+'/OFL.txt */\n'+localCss)
   console.log('[font] bundled '+id+' ('+variants.size+' WOFF2 files)')
 }
+
+// The two families below are copied unmodified from the original author's repositories.
+// They are intentionally NOT converted or subsetted to avoid reserved-font-name conflicts.
+const OTHER_OFL = [
+  {
+    id:'lxgw975', family:'LXGW 975 Yuan',
+    source:'https://raw.githubusercontent.com/lxgw/975Yuan/main/TTF/LXGW975YuanSC-400W.ttf',
+    license:'https://raw.githubusercontent.com/lxgw/975Yuan/main/OFL.txt',
+    ext:'ttf', format:'truetype'
+  },
+  {
+    id:'gensen', family:'GenSen Rounded',
+    source:'https://raw.githubusercontent.com/ButTaiwan/gensen-font/master/otf/TC/GenSenRounded2TC-R.otf',
+    license:'https://raw.githubusercontent.com/ButTaiwan/gensen-font/master/SIL_Open_Font_License_1.1.txt',
+    ext:'otf', format:'opentype'
+  }
+]
+async function bundleOriginal(font) {
+  const dir=join(root,font.id)
+  const file=join(dir,'download.'+font.ext)
+  const license=join(dir,'OFL.txt')
+  const css=join(root,font.id+'.css')
+  if (!force && [file,license,css].every(existsSync)) {
+    console.log('[font] cached '+font.id)
+    return
+  }
+  await Promise.all([store(font.source,file),store(font.license,license)])
+  writeFileSync(css,
+    "/* Original font file, not modified; OFL.txt: ./"+font.id+"/OFL.txt */\n"+
+    "@font-face{font-family:'"+font.family+"';src:url('./"+font.id+"/download."+font.ext+
+    "') format('"+font.format+"');font-style:normal;font-weight:400;font-display:swap}\n")
+  console.log('[font] bundled original '+font.id)
+}
 async function main() {
   mkdirSync(root,{recursive:true})
   await pool(FONTS,bundle,2)
-  console.log('[font] '+FONTS.length+' families ready')
+  await pool(OTHER_OFL,bundleOriginal,2)
+  console.log('[font] '+(FONTS.length+OTHER_OFL.length)+' families ready')
 }
 main().catch(error=>{console.error(error);process.exitCode=1})
