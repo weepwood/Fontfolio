@@ -3,6 +3,7 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, reactive } 
 import { ArrowRight, ArrowUpRight, Check, Columns2, Copy, Download, ExternalLink, Github, Heart, LayoutGrid, Menu, Moon, Plus, Search, SlidersHorizontal, Sun, Type, UploadCloud, X } from 'lucide-vue-next'
 import { categories, fonts as initialFonts, type FontRecord, type FontCategory } from './data/fonts'
 import { deleteSavedFont, loadSavedFonts, saveFont, type SavedFont } from './lib/local-fonts'
+import AutoFitSample from './components/AutoFitSample.vue'
 
 type Filter = FontCategory | '全部' | '收藏'
 type Page = 'gallery' | 'compare'
@@ -57,8 +58,11 @@ function available(font:FontRecord) { return Boolean(localFamily[font.id]) || (f
 function downloadExt(font:FontRecord){return ['gensen','genyo-gothic'].includes(font.id)?'otf':'ttf'}
 function downloadUrl(font:FontRecord){return import.meta.env.BASE_URL+'fonts/'+font.id+'/download.'+downloadExt(font)}
 function licenseUrl(font:FontRecord){return import.meta.env.BASE_URL+'fonts/'+font.id+'/OFL.txt'}
+function fontFamilyFor(font:FontRecord) {
+  return available(font) ? '"' + (localFamily[font.id] || font.family) + '", sans-serif' : 'inherit'
+}
 function styleFor(font:FontRecord) {
-  return {fontFamily:available(font) ? '"' + (localFamily[font.id] || font.family) + '", sans-serif' : 'inherit',fontSize:fontSize.value+'px',fontWeight:fontWeight.value,letterSpacing:spacing.value+'px',lineHeight:leading.value}
+  return {fontFamily:fontFamilyFor(font),fontSize:fontSize.value+'px',fontWeight:fontWeight.value,letterSpacing:spacing.value+'px',lineHeight:leading.value}
 }
 function ensureFont(font:FontRecord) {
   if (font.source!=='bundled' || fontStatus[font.id]) return
@@ -247,7 +251,14 @@ watch(detail,(value)=>{document.body.style.overflow=value?'hidden':''})
             <div v-if="filtered.length" class="font-grid">
               <article v-for="font in filtered" :key="font.id" v-visible="font" class="font-card" tabindex="0" @click="showFont(font)" @keydown.enter="showFont(font)">
                 <div class="font-card-top"><div><span class="card-number">{{ String(fontList.indexOf(font)+1).padStart(2,'0') }}</span><span class="card-tag">{{font.category}}</span></div><div class="card-actions"><a v-if="font.source==='bundled'" class="card-download" :href="downloadUrl(font)" :download="font.name+'.'+downloadExt(font)" :aria-label="'下载 '+font.name" :title="'下载字体文件（'+downloadExt(font).toUpperCase()+'）'" @click.stop><Download :size="16"/></a><button type="button" class="favorite-button" :aria-label="favorites.includes(font.id)?'取消收藏':'收藏字体'" @click.stop="toggleFavorite(font.id)"><Heart :size="17" :fill="favorites.includes(font.id)?'currentColor':'none'"/></button></div></div>
-                <div class="card-sample-wrap"><div class="card-sample" :style="{...styleFor(font),fontSize:'clamp(28px, 3vw, 48px)'}">{{ previewText(font) }}</div><div v-if="font.source==='manual' && !available(font)" class="needs-font">需从官方获取 · 可自行导入预览</div><div v-else-if="fontStatus[font.id]==='error' && !available(font)" class="needs-font">加载失败 · 当前显示备用字体</div><div v-else-if="font.source==='bundled' && available(font)" class="needs-font font-loaded">✓ 已内置 · 支持下载</div><div v-else-if="font.source==='manual' && localOrigin[font.id]" class="needs-font font-loaded">{{localOrigin[font.id]==='installed'?'✓ 已识别本机字库':'✓ 本地字库已加载'}}</div></div>
+                <div class="card-sample-wrap"><AutoFitSample
+                  :text="previewText(font)"
+                  :font-family="fontFamilyFor(font)"
+                  :font-weight="fontWeight"
+                  :letter-spacing="spacing"
+                  :line-height="leading"
+                  :preferred-size="Math.min(fontSize, 48)"
+                /><div v-if="font.source==='manual' && !available(font)" class="needs-font">需从官方获取 · 可自行导入预览</div><div v-else-if="fontStatus[font.id]==='error' && !available(font)" class="needs-font">加载失败 · 当前显示备用字体</div><div v-else-if="font.source==='bundled' && available(font)" class="needs-font font-loaded">✓ 已内置 · 支持下载</div><div v-else-if="font.source==='manual' && localOrigin[font.id]" class="needs-font font-loaded">{{localOrigin[font.id]==='installed'?'✓ 已识别本机字库':'✓ 本地字库已加载'}}</div></div>
                 <div class="font-card-footer"><div><h3>{{font.name}}</h3><p>{{font.nativeName}} · {{font.mood}}</p></div><ArrowUpRight :size="18"/></div>
               </article>
             </div>
@@ -255,7 +266,7 @@ watch(detail,(value)=>{document.body.style.overflow=value?'hidden':''})
           </section>
           <section class="preview-panel">
             <div class="section-heading"><div><span class="eyebrow">02 / MAKE IT YOURS</span><h2>实时文字预览</h2></div><div class="panel-hint"><SlidersHorizontal :size="17"/> INTERACTIVE TYPE TESTER</div></div>
-            <div class="preview-card"><div class="preview-head"><label class="preview-text-label">你的预览文字 <span>可直接编辑</span></label><div class="preview-badge">LIVE PREVIEW</div></div><textarea v-model="sample" rows="2" maxlength="150" aria-label="输入自定义预览文字" placeholder="输入你想预览的文字"></textarea><div class="controls-grid"><label>字号 <strong>{{fontSize}} px</strong><input v-model.number="fontSize" type="range" min="18" max="100" step="1"/></label><label>字重 <strong>{{fontWeight}}</strong><input v-model.number="fontWeight" type="range" min="300" max="800" step="100"/></label><label>字间距 <strong>{{spacing}} px</strong><input v-model.number="spacing" type="range" min="-2" max="12" step=".5"/></label><label>行高 <strong>{{leading.toFixed(2)}}</strong><input v-model.number="leading" type="range" min="1" max="2.2" step=".05"/></label></div><div class="preview-tip">参数会同步应用于上方字体卡片和排版实验室；字体未加载时使用系统备用字形。</div></div>
+            <div class="preview-card"><div class="preview-head"><label class="preview-text-label">你的预览文字 <span>可直接编辑</span></label><div class="preview-badge">LIVE PREVIEW</div></div><textarea v-model="sample" rows="2" maxlength="150" aria-label="输入自定义预览文字" placeholder="输入你想预览的文字"></textarea><div class="controls-grid"><label>字号 <strong>{{fontSize}} px</strong><input v-model.number="fontSize" type="range" min="18" max="100" step="1"/></label><label>字重 <strong>{{fontWeight}}</strong><input v-model.number="fontWeight" type="range" min="300" max="800" step="100"/></label><label>字间距 <strong>{{spacing}} px</strong><input v-model.number="spacing" type="range" min="-2" max="12" step=".5"/></label><label>行高 <strong>{{leading.toFixed(2)}}</strong><input v-model.number="leading" type="range" min="1" max="2.2" step=".05"/></label></div><div class="preview-tip">参数会同步应用于字体卡片和排版实验室；卡片会根据宽度优先单行显示完整文字，过长时自动换行。字体未加载时使用备用字形。</div></div>
           </section>
           <section class="footer-feature"><div><span class="eyebrow">03 / COMPARE & DISCOVER</span><h2>找到刚刚好的字体组合。</h2><p>把最多三款字体放在一起，比较同一段文字的不同气质。</p></div><button type="button" @click="changePage('compare')">打开排版实验室 <ArrowRight :size="18"/></button></section>
         </template>
