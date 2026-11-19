@@ -102,8 +102,8 @@ async function bundle([id,slug,file,family,weight]) {
 const OTHER_OFL = [
   {
     id:'lxgw975', family:'LXGW 975 Yuan',
-    source:'https://raw.githubusercontent.com/lxgw/975Yuan/main/TTF/LXGW975YuanSC-400W.ttf',
-    license:'https://raw.githubusercontent.com/lxgw/975Yuan/main/OFL.txt',
+    source:'https://raw.githubusercontent.com/lxgw/975Yuan/master/TTF/LXGW975YuanSC-400W.ttf',
+    license:'https://raw.githubusercontent.com/lxgw/975Yuan/master/OFL.txt',
     ext:'ttf', format:'truetype'
   },
   {
